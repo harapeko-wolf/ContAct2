@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "rules": {
+    "formatting": {
+      "indentSize": 2,
+      "useTabs": false,
+      "lineEnding": "lf",
+      "maxLineLength": 100
+    },
+    "typescript": {
+      "strict": true,
+      "noImplicitAny": true,
+      "strictNullChecks": true,
+      "strictFunctionTypes": true,
+      "strictBindCallApply": true,
+      "strictPropertyInitialization": true,
+      "noImplicitThis": true,
+      "alwaysStrict": true
+    },
+    "php": {
+      "psr12": true,
+      "strict_types": true
+    },
+    "git": {
+      "branchNaming": {
+        "feature": "feature/*",
+        "bugfix": "fix/*",
+        "hotfix": "hotfix/*",
+        "release": "release/*"
+      },
+      "commitMessage": {
+        "format": "<type>(<scope>): <description>",
+        "types": [
+          "feat",
+          "fix",
+          "docs",
+          "style",
+          "refactor",
+          "test",
+          "chore"
+        ],
+        "maxLength": 72
+      }
+    },
+    "security": {
+      "noSecretsInCode": true,
+      "noHardcodedCredentials": true
+    },
+    "documentation": {
+      "requireReadme": true,
+      "requireApiDocs": true,
+      "requireCodeComments": true
+    },
+    "testing": {
+      "requireTests": true,
+      "minCoverage": 80
+    },
+    "dependencies": {
+      "allowDevDependencies": true,
+      "requireExactVersions": true
+    }
+  }
+}
