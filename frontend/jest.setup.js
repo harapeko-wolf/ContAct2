@@ -1,4 +1,4 @@
-require('@testing-library/jest-dom');
+import '@testing-library/jest-dom';
 
 // fetchのモック
 global.fetch = jest.fn();
