@@ -59,3 +59,89 @@
 ### 依存関係設定
 - 開発依存関係の使用を許可
 - バージョン指定を厳格化
+
+## 開発環境のセットアップ
+
+### 必要条件
+- Docker
+- Docker Compose
+
+### 環境構築
+```bash
+# リポジトリのクローン
+git clone https://github.com/your-username/ContAct2.git
+cd ContAct2
+
+# 環境変数の設定
+cp .env.example .env
+
+# Dockerコンテナの起動
+docker compose up -d
+
+# バックエンドの依存関係インストール
+docker compose exec backend composer install
+
+# フロントエンドの依存関係インストール
+docker compose exec frontend npm install
+
+# データベースのマイグレーション
+docker compose exec backend php artisan migrate
+```
+
+## テストの実行
+
+### バックエンドのテスト
+```bash
+# すべてのテストを実行
+docker compose exec backend php artisan test
+
+# 特定のテストファイルを実行
+docker compose exec backend php artisan test --filter=AuthTest
+```
+
+### フロントエンドのテスト
+```bash
+# すべてのテストを実行
+docker compose exec frontend npm test
+
+# 特定のテストファイルを実行
+docker compose exec frontend npm test auth.test.tsx
+```
+
+## 開発サーバーの起動
+
+### バックエンド（Laravel）
+```bash
+docker compose exec backend php artisan serve
+```
+
+### フロントエンド（Next.js）
+```bash
+docker compose exec frontend npm run dev
+```
+
+## その他のコマンド
+
+### バックエンド
+```bash
+# データベースのマイグレーション
+docker compose exec backend php artisan migrate
+
+# データベースのシード
+docker compose exec backend php artisan db:seed
+
+# キャッシュのクリア
+docker compose exec backend php artisan cache:clear
+```
+
+### フロントエンド
+```bash
+# ビルド
+docker compose exec frontend npm run build
+
+# リンターの実行
+docker compose exec frontend npm run lint
+
+# 型チェック
+docker compose exec frontend npm run type-check
+```
