@@ -13,14 +13,15 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/app/contexts/AuthContext';
 
 const registerSchema = z.object({
-  name: z.string().min(2, { message: 'Name must be at least 2 characters' }),
-  email: z.string().email({ message: 'Please enter a valid email address' }),
-  password: z.string().min(8, { message: 'Password must be at least 8 characters' }),
+  name: z.string().min(2, { message: '名前は2文字以上で入力してください' }),
+  email: z.string().email({ message: '有効なメールアドレスを入力してください' }),
+  password: z.string().min(8, { message: 'パスワードは8文字以上で入力してください' }),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
+  message: 'パスワードが一致しません',
   path: ["confirmPassword"],
 });
 
@@ -30,6 +31,7 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const { register } = useAuth();
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -44,17 +46,35 @@ export default function RegisterPage() {
   async function onSubmit(data: RegisterFormValues) {
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      
+    try {
+      await register(data.name, data.email, data.password);
       toast({
-        title: 'Account created successfully',
-        description: 'Welcome to ContAct',
+        title: 'アカウントを作成しました',
+        description: 'ContActへようこそ',
       });
-      
       router.push('/admin/dashboard');
-    }, 1500);
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || '入力内容を確認してください';
+      const errors = error.response?.data?.errors;
+      
+      if (errors) {
+        // バリデーションエラーの場合、各フィールドにエラーメッセージを設定
+        Object.entries(errors).forEach(([field, messages]) => {
+          form.setError(field as any, {
+            type: 'manual',
+            message: Array.isArray(messages) ? messages[0] : messages,
+          });
+        });
+      }
+
+      toast({
+        title: 'アカウントの作成に失敗しました',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (

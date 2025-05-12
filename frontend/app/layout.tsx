@@ -1,7 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { Noto_Sans_JP } from 'next/font/google';
-import { Toaster } from '@/components/ui/toaster';
+import { Providers } from './providers';
 
 // Noto Sans JPフォントの設定
 const notoSansJP = Noto_Sans_JP({
@@ -24,8 +24,9 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body className={`${notoSansJP.variable} font-sans`}>
-        {children}
-        <Toaster />
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   );

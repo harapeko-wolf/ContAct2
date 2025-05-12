@@ -13,10 +13,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/app/contexts/AuthContext';
 
 const loginSchema = z.object({
-  email: z.string().email({ message: 'Please enter a valid email address' }),
-  password: z.string().min(8, { message: 'Password must be at least 8 characters' }),
+  email: z.string().email({ message: '有効なメールアドレスを入力してください' }),
+  password: z.string().min(8, { message: 'パスワードは8文字以上で入力してください' }),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -25,6 +26,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const { login } = useAuth();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -37,18 +39,22 @@ export default function LoginPage() {
   async function onSubmit(data: LoginFormValues) {
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      
-      // For prototype, automatically log in without checking credentials
+    try {
+      await login(data.email, data.password);
       toast({
-        title: 'Logged in successfully',
-        description: 'Welcome back to ContAct',
+        title: 'ログインしました',
+        description: 'ContActへようこそ',
       });
-      
       router.push('/admin/dashboard');
-    }, 1500);
+    } catch (error) {
+      toast({
+        title: 'ログインに失敗しました',
+        description: 'メールアドレスとパスワードを確認してください',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (

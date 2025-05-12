@@ -9,5 +9,12 @@ RUN npm install
 # アプリケーションのコピー
 COPY frontend/ .
 
-# 開発サーバーの起動
+# テスト環境の設定
+ENV NODE_ENV=test
+
+# テスト実行用のエントリーポイント
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["npm", "run", "dev"] 
