@@ -1,0 +1,51 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# データベース設計ガイド
+
+## テーブル構造
+
+### companies テーブル
+- UUIDを主キーとして使用
+- 必須フィールド: name, email
+- オプションフィールド: phone, address, website, description, industry, employee_count
+- ステータス管理: status (デフォルト: 'active')
+- ソフトデリート対応
+
+### documents テーブル
+- UUIDを主キーとして使用
+- 会社との関連付け: company_id (外部キー)
+- 必須フィールド: title, file_path, file_name, file_size, mime_type
+- オプションフィールド: page_count
+- メタデータ: metadata (JSON)
+- ステータス管理: status (デフォルト: 'active')
+- ソフトデリート対応
+
+### document_views テーブル
+- UUIDを主キーとして使用
+- ドキュメントとの関連付け: document_id (外部キー)
+- 必須フィールド: viewer_ip, page_number, viewed_at
+- オプションフィールド: viewer_user_agent, view_duration, viewer_metadata
+
+### document_feedback テーブル
+- UUIDを主キーとして使用
+- ドキュメントとの関連付け: document_id (外部キー)
+- 必須フィールド: feedback_type, feedbacker_ip
+- オプションフィールド: content, feedbacker_user_agent, feedback_metadata
+
+## 命名規則
+- テーブル名: スネークケース（複数形）
+- カラム名: スネークケース
+- 外部キー: 参照先テーブル名_id
+
+## インデックス
+- 主キー: すべてのテーブルでUUID
+- 外部キー: すべての外部キーにインデックス
+- ユニーク制約: companies.email
+
+## リレーション
+- companies 1:N documents
+- documents 1:N document_views
+- documents 1:N document_feedback
