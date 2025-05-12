@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
   BarChart3, 
   FileText, 
@@ -14,6 +14,8 @@ import {
   Users,
   X
 } from 'lucide-react';
+import { useAuth } from '@/app/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -26,7 +28,10 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const { logout } = useAuth();
+  const { toast } = useToast();
 
   const routes = [
     {
@@ -55,6 +60,23 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     },
   ];
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast({
+        title: 'ログアウトしました',
+        description: 'またのご利用をお待ちしております',
+      });
+      router.push('/admin/login');
+    } catch (error) {
+      toast({
+        title: 'ログアウトに失敗しました',
+        description: 'もう一度お試しください',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className="flex min-h-screen">
       {/* Mobile Navigation */}
@@ -78,6 +100,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <main className="flex-1 h-full overflow-auto">
         {children}
       </main>
+
+      <div className="p-4 border-t mt-auto">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-gray-50 transition-colors"
+        >
+          <LogOut className="h-5 w-5" />
+          ログアウト
+        </button>
+      </div>
     </div>
   );
 }
@@ -93,6 +125,27 @@ interface NavProps {
 }
 
 function MobileNav({ routes, setOpen }: NavProps) {
+  const router = useRouter();
+  const { logout } = useAuth();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast({
+        title: 'ログアウトしました',
+        description: 'またのご利用をお待ちしております',
+      });
+      router.push('/admin/login');
+    } catch (error) {
+      toast({
+        title: 'ログアウトに失敗しました',
+        description: 'もう一度お試しください',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className="h-full flex flex-col">
       <div className="p-4 border-b flex items-center justify-between">
@@ -133,16 +186,40 @@ function MobileNav({ routes, setOpen }: NavProps) {
         </div>
       </ScrollArea>
       <div className="p-4 border-t">
-        <Link href="/" className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-gray-50 transition-colors">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-gray-50 transition-colors"
+        >
           <LogOut className="h-5 w-5" />
-          Logout
-        </Link>
+          ログアウト
+        </button>
       </div>
     </div>
   );
 }
 
 function DesktopNav({ routes }: NavProps) {
+  const router = useRouter();
+  const { logout } = useAuth();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast({
+        title: 'ログアウトしました',
+        description: 'またのご利用をお待ちしております',
+      });
+      router.push('/admin/login');
+    } catch (error) {
+      toast({
+        title: 'ログアウトに失敗しました',
+        description: 'もう一度お試しください',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className="h-full flex flex-col">
       <div className="p-6">
@@ -171,10 +248,13 @@ function DesktopNav({ routes }: NavProps) {
         </div>
       </ScrollArea>
       <div className="p-4 border-t mt-auto">
-        <Link href="/" className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-gray-50 transition-colors">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-gray-50 transition-colors"
+        >
           <LogOut className="h-5 w-5" />
           ログアウト
-        </Link>
+        </button>
       </div>
     </div>
   );
