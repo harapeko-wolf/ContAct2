@@ -1,0 +1,82 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# API設計ガイド
+
+## エンドポイント設計
+
+### 認証
+- POST /api/auth/login - ログイン
+- POST /api/auth/logout - ログアウト
+- POST /api/auth/register - ユーザー登録
+- GET /api/auth/user - 認証済みユーザー情報取得
+
+### 会社管理
+- GET /api/companies - 会社一覧取得
+- GET /api/companies/{id} - 会社詳細取得
+- POST /api/companies - 会社作成
+- PUT /api/companies/{id} - 会社更新
+- DELETE /api/companies/{id} - 会社削除
+
+### ドキュメント管理
+- GET /api/documents - ドキュメント一覧取得
+- GET /api/documents/{id} - ドキュメント詳細取得
+- POST /api/documents - ドキュメント作成
+- PUT /api/documents/{id} - ドキュメント更新
+- DELETE /api/documents/{id} - ドキュメント削除
+
+### ドキュメント閲覧
+- GET /api/documents/{id}/views - 閲覧履歴取得
+- POST /api/documents/{id}/views - 閲覧記録作成
+
+### ドキュメントフィードバック
+- GET /api/documents/{id}/feedback - フィードバック一覧取得
+- POST /api/documents/{id}/feedback - フィードバック作成
+
+## レスポンス形式
+```json
+{
+  "data": {
+    // リソースデータ
+  },
+  "meta": {
+    "timestamp": "2024-03-14T12:00:00Z"
+  }
+}
+```
+
+## エラーレスポンス
+```json
+{
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "エラーメッセージ",
+    "details": {
+      // エラー詳細
+    }
+  }
+}
+```
+
+## 認証
+- Laravel Sanctumを使用
+- セッションベースの認証（SPA用）
+- CSRFトークン保護
+- トークンはCookieで自動送信
+- 認証済みリクエストには`X-XSRF-TOKEN`ヘッダーが必要
+
+## バージョニング
+- URLパスにバージョンを含める: `/api/v1/...`
+- デフォルトバージョン: v1
+
+## レート制限
+- リクエスト制限: 60回/分
+- 制限超過時は429エラーを返す
+
+## CORS設定
+- 許可オリジン: http://localhost:3000
+- 許可メソッド: GET, POST, PUT, DELETE
+- 許可ヘッダー: Content-Type, X-XSRF-TOKEN
+- クレデンシャル: true（Cookie送信を許可）

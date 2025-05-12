@@ -1,0 +1,29 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# プロジェクト構造ガイド
+
+## フロントエンド (Next.js)
+- メインページ: [page.tsx](mdc:frontend/app/page.tsx)
+- レイアウト: [layout.tsx](mdc:frontend/app/layout.tsx)
+- スタイル: [globals.css](mdc:frontend/app/globals.css)
+
+### ディレクトリ構造
+- `/view`: ドキュメント閲覧機能
+- `/admin`: 管理画面機能
+
+## バックエンド (Laravel)
+- マイグレーション: [database/migrations](mdc:backend/database/migrations)
+- シーダー: [database/seeders](mdc:backend/database/seeders)
+
+### テーブル構造
+- [companies](mdc:backend/database/migrations/2025_05_12_023951_create_companies_table.php)
+- [documents](mdc:backend/database/migrations/2025_05_12_023952_create_documents_table.php)
+- [document_views](mdc:backend/database/migrations/2025_05_12_023954_create_document_views_table.php)
+- [document_feedback](mdc:backend/database/migrations/2025_05_12_023955_create_document_feedback_table.php)
+
+## 開発ルール
+- コードフォーマット: [.cursor/rules.json](mdc:.cursor/rules.json)
+- Git運用: [README.md](mdc:README.md)
