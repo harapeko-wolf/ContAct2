@@ -1,27 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { ArrowLeft, Loader2 } from 'lucide-react';
+import { use } from 'react';
 
 import AdminLayout from '@/components/admin/layout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { companyApi } from '@/lib/api';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { companyApi, Company } from '@/lib/api';
 
 const companySchema = z.object({
   name: z.string().min(2, { message: '会社名は2文字以上必要です' }),
@@ -37,7 +31,9 @@ const companySchema = z.object({
 
 type CompanyFormValues = z.infer<typeof companySchema>;
 
-export default function CreateCompanyPage() {
+export default function EditCompanyPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -57,27 +53,67 @@ export default function CreateCompanyPage() {
     },
   });
 
+  useEffect(() => {
+    loadCompany();
+  }, [resolvedParams.id]);
+
+  const loadCompany = async () => {
+    try {
+      const company = await companyApi.getById(resolvedParams.id);
+      form.reset({
+        name: company.name,
+        email: company.email,
+        phone: company.phone || '',
+        address: company.address || '',
+        website: company.website || '',
+        description: company.description || '',
+        industry: company.industry || '',
+        employee_count: company.employee_count,
+        status: company.status,
+      });
+    } catch (error) {
+      toast({
+        title: 'エラー',
+        description: '会社情報の取得に失敗しました',
+        variant: 'destructive',
+      });
+      router.push('/admin/companies');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   async function onSubmit(data: CompanyFormValues) {
     setIsSaving(true);
     
     try {
-      await companyApi.create(data);
+      await companyApi.update(resolvedParams.id, data);
       
       toast({
         title: '成功',
-        description: '会社を作成しました',
+        description: '会社情報を更新しました',
       });
       
       router.push('/admin/companies');
     } catch (error) {
       toast({
         title: 'エラー',
-        description: '会社の作成に失敗しました',
+        description: '会社情報の更新に失敗しました',
         variant: 'destructive',
       });
     } finally {
       setIsSaving(false);
     }
+  }
+
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex-1 flex items-center justify-center p-8">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </AdminLayout>
+    );
   }
 
   return (
@@ -95,9 +131,9 @@ export default function CreateCompanyPage() {
         <div className="max-w-2xl mx-auto">
           <Card>
             <CardHeader>
-              <CardTitle className="text-2xl">会社を追加</CardTitle>
+              <CardTitle className="text-2xl">会社情報を編集</CardTitle>
               <CardDescription>
-                新しい会社のプロフィール情報を入力
+                会社のプロフィール情報を更新
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -210,33 +246,6 @@ export default function CreateCompanyPage() {
                       )}
                     />
                   </div>
-
-                  <FormField
-                    control={form.control}
-                    name="status"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>ステータス</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          defaultValue={field.value}
-                          disabled={isSaving}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="ステータスを選択" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="active">受注</SelectItem>
-                            <SelectItem value="considering">検討中</SelectItem>
-                            <SelectItem value="inactive">失注</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                   
                   <FormField
                     control={form.control}
@@ -271,10 +280,10 @@ export default function CreateCompanyPage() {
                       {isSaving ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          作成中...
+                          更新中...
                         </>
                       ) : (
-                        '作成する'
+                        '更新する'
                       )}
                     </Button>
                   </div>
@@ -286,4 +295,4 @@ export default function CreateCompanyPage() {
       </div>
     </AdminLayout>
   );
-}
+} 
