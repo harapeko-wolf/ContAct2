@@ -88,26 +88,6 @@ docker compose exec frontend npm install
 docker compose exec backend php artisan migrate
 ```
 
-## テストの実行
-
-### バックエンドのテスト
-```bash
-# すべてのテストを実行
-docker compose exec backend php artisan test
-
-# 特定のテストファイルを実行
-docker compose exec backend php artisan test --filter=AuthTest
-```
-
-### フロントエンドのテスト
-```bash
-# すべてのテストを実行
-docker compose exec frontend npm test
-
-# 特定のテストファイルを実行
-docker compose exec frontend npm test auth.test.tsx
-```
-
 ## 開発サーバーの起動
 
 ### バックエンド（Laravel）
@@ -119,6 +99,14 @@ docker compose exec backend php artisan serve
 ```bash
 docker compose exec frontend npm run dev
 ```
+
+## アクセス情報
+
+- フロントエンド: http://localhost:3000
+- バックエンドAPI: http://localhost:80
+- phpMyAdmin: http://localhost:8080
+  - ユーザー名: contact2_user
+  - パスワード: contact2_password
 
 ## その他のコマンド
 
@@ -145,3 +133,11 @@ docker compose exec frontend npm run lint
 # 型チェック
 docker compose exec frontend npm run type-check
 ```
+
+## コンテナ情報
+
+- フロントエンド: Next.js (ポート3000)
+- バックエンド: Laravel (ポート80)
+- データベース: MySQL 8.4 (ポート3306)
+- phpMyAdmin: (ポート8080)
+- Nginx: (ポート80)
