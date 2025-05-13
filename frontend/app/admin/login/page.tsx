@@ -45,7 +45,6 @@ export default function LoginPage() {
         title: 'ログインしました',
         description: 'ContActへようこそ',
       });
-      router.push('/admin/dashboard');
     } catch (error) {
       toast({
         title: 'ログインに失敗しました',

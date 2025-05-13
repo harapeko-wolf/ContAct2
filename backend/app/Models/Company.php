@@ -15,6 +15,7 @@ class Company extends Model
 
     protected $fillable = [
         'id',
+        'user_id',
         'name',
         'email',
         'phone',
@@ -29,6 +30,20 @@ class Company extends Model
     protected $casts = [
         'employee_count' => 'integer',
     ];
+
+    protected $attributes = [
+        'phone' => null,
+        'address' => null,
+        'website' => null,
+        'description' => null,
+        'industry' => null,
+        'employee_count' => null,
+    ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 
     public function documents()
     {

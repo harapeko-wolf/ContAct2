@@ -1,0 +1,19 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Docker環境
+
+<environment_rules>
+1. このプロジェクトはDocker環境で動作します
+2. すべてのコマンドはDockerコンテナ内で実行する必要があります
+3. フロントエンドのコマンドは `docker compose exec frontend` を使用
+4. バックエンドのコマンドは `docker compose exec backend` を使用
+</environment_rules>
+
+# フロントエンドのテスト実行
+docker compose exec frontend npm test
+
+# バックエンドのテスト実行
+docker compose exec backend php artisan test

@@ -83,6 +83,13 @@ export default function CompaniesPage() {
     companyId: null,
     newStatus: null,
   });
+  const [deleteDialog, setDeleteDialog] = useState<{
+    isOpen: boolean;
+    companyId: string | null;
+  }>({
+    isOpen: false,
+    companyId: null,
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -107,11 +114,18 @@ export default function CompaniesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('本当にこの会社を削除しますか？')) return;
+    setDeleteDialog({
+      isOpen: true,
+      companyId: id,
+    });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteDialog.companyId) return;
 
     try {
-      await companyApi.delete(id);
-      setCompanies(companies.filter(company => company.id !== id));
+      await companyApi.delete(deleteDialog.companyId);
+      setCompanies(companies.filter(company => company.id !== deleteDialog.companyId));
       toast({
         title: '成功',
         description: '会社を削除しました',
@@ -128,6 +142,11 @@ export default function CompaniesPage() {
         description: '会社の削除に失敗しました',
         variant: 'destructive',
       });
+    } finally {
+      setDeleteDialog({
+        isOpen: false,
+        companyId: null,
+      });
     }
   };
 
@@ -136,21 +155,14 @@ export default function CompaniesPage() {
       const company = companies.find(c => c.id === companyId);
       if (!company) return;
 
-      const updatedCompany = await companyApi.update(companyId, {
+      await companyApi.update(companyId, {
         name: company.name,
         email: company.email,
-        phone: company.phone,
-        address: company.address,
-        website: company.website,
-        description: company.description,
-        industry: company.industry,
-        employee_count: company.employee_count,
         status: newStatus
       });
       
-      setCompanies(prevCompanies => 
-        prevCompanies.map(c => c.id === companyId ? updatedCompany : c)
-      );
+      // 会社一覧を再取得
+      await loadCompanies();
       
       toast({
         title: '成功',
@@ -174,8 +186,8 @@ export default function CompaniesPage() {
 
   const filteredCompanies = companies.filter(company => {
     const matchesSearch = 
-      company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      company.email.toLowerCase().includes(searchTerm.toLowerCase());
+      (company.name?.toLowerCase() ?? '').includes(searchTerm.toLowerCase()) ||
+      (company.email?.toLowerCase() ?? '').includes(searchTerm.toLowerCase());
     
     const matchesStatus = selectedStatus === 'すべて' || 
       (selectedStatus in REVERSE_STATUS_MAP && company.status === REVERSE_STATUS_MAP[selectedStatus]);
@@ -250,8 +262,8 @@ export default function CompaniesPage() {
         </div>
         
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredCompanies.map(company => (
-            <Card key={company.id} className="overflow-hidden">
+          {filteredCompanies.map((company, index) => (
+            <Card key={company.id ?? `company-${index}`} className="overflow-hidden">
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
                   <div>
@@ -271,7 +283,7 @@ export default function CompaniesPage() {
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" data-testid="company-menu">
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -532,6 +544,33 @@ export default function CompaniesPage() {
                 }}
               >
                 変更する
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog 
+          open={deleteDialog.isOpen} 
+          onOpenChange={(open) => {
+            if (!open) {
+              setDeleteDialog({
+                isOpen: false,
+                companyId: null,
+              });
+            }
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>会社を削除</AlertDialogTitle>
+              <AlertDialogDescription>
+                この会社を削除してもよろしいですか？この操作は取り消せません。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>キャンセル</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete}>
+                削除する
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
