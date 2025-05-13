@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { ArrowLeft, Loader2 } from 'lucide-react';
+import { use } from 'react';
 
 import AdminLayout from '@/components/admin/layout';
 import { Button } from '@/components/ui/button';
@@ -25,12 +26,13 @@ const companySchema = z.object({
   description: z.string().optional(),
   industry: z.string().optional(),
   employee_count: z.number().int().positive().optional(),
-  status: z.enum(['active', 'inactive']).default('active'),
+  status: z.enum(['active', 'considering', 'inactive']).default('active'),
 });
 
 type CompanyFormValues = z.infer<typeof companySchema>;
 
-export default function EditCompanyPage({ params }: { params: { id: string } }) {
+export default function EditCompanyPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
@@ -53,11 +55,11 @@ export default function EditCompanyPage({ params }: { params: { id: string } }) 
 
   useEffect(() => {
     loadCompany();
-  }, [params.id]);
+  }, [resolvedParams.id]);
 
   const loadCompany = async () => {
     try {
-      const company = await companyApi.getById(params.id);
+      const company = await companyApi.getById(resolvedParams.id);
       form.reset({
         name: company.name,
         email: company.email,
@@ -85,7 +87,7 @@ export default function EditCompanyPage({ params }: { params: { id: string } }) 
     setIsSaving(true);
     
     try {
-      await companyApi.update(params.id, data);
+      await companyApi.update(resolvedParams.id, data);
       
       toast({
         title: '成功',

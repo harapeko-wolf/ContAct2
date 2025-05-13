@@ -9,12 +9,19 @@ import { ArrowLeft, Loader2 } from 'lucide-react';
 
 import AdminLayout from '@/components/admin/layout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { companyApi } from '@/lib/api';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const companySchema = z.object({
   name: z.string().min(2, { message: '会社名は2文字以上必要です' }),
@@ -25,13 +32,13 @@ const companySchema = z.object({
   description: z.string().optional(),
   industry: z.string().optional(),
   employee_count: z.number().int().positive().optional(),
-  status: z.enum(['active', 'inactive']).default('active'),
+  status: z.enum(['active', 'considering', 'inactive']).default('active'),
 });
 
 type CompanyFormValues = z.infer<typeof companySchema>;
 
 export default function CreateCompanyPage() {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -51,7 +58,7 @@ export default function CreateCompanyPage() {
   });
 
   async function onSubmit(data: CompanyFormValues) {
-    setIsLoading(true);
+    setIsSaving(true);
     
     try {
       await companyApi.create(data);
@@ -69,7 +76,7 @@ export default function CreateCompanyPage() {
         variant: 'destructive',
       });
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   }
 
@@ -88,9 +95,9 @@ export default function CreateCompanyPage() {
         <div className="max-w-2xl mx-auto">
           <Card>
             <CardHeader>
-              <CardTitle className="text-2xl">新規会社を追加</CardTitle>
+              <CardTitle className="text-2xl">会社を追加</CardTitle>
               <CardDescription>
-                資料を共有する会社のプロフィールを作成
+                新しい会社のプロフィール情報を入力
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -103,7 +110,7 @@ export default function CreateCompanyPage() {
                       <FormItem>
                         <FormLabel>会社名</FormLabel>
                         <FormControl>
-                          <Input placeholder="株式会社テクノソリューション" {...field} disabled={isLoading} />
+                          <Input placeholder="株式会社テクノソリューション" {...field} disabled={isSaving} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -118,7 +125,7 @@ export default function CreateCompanyPage() {
                         <FormItem>
                           <FormLabel>メールアドレス</FormLabel>
                           <FormControl>
-                            <Input placeholder="info@example.com" type="email" {...field} disabled={isLoading} />
+                            <Input placeholder="info@example.com" type="email" {...field} disabled={isSaving} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -132,7 +139,7 @@ export default function CreateCompanyPage() {
                         <FormItem>
                           <FormLabel>電話番号（任意）</FormLabel>
                           <FormControl>
-                            <Input placeholder="03-1234-5678" {...field} disabled={isLoading} />
+                            <Input placeholder="03-1234-5678" {...field} disabled={isSaving} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -147,7 +154,7 @@ export default function CreateCompanyPage() {
                       <FormItem>
                         <FormLabel>住所（任意）</FormLabel>
                         <FormControl>
-                          <Input placeholder="東京都千代田区丸の内1-1-1" {...field} disabled={isLoading} />
+                          <Input placeholder="東京都千代田区丸の内1-1-1" {...field} disabled={isSaving} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -161,7 +168,7 @@ export default function CreateCompanyPage() {
                       <FormItem>
                         <FormLabel>Webサイト（任意）</FormLabel>
                         <FormControl>
-                          <Input placeholder="https://example.com" {...field} disabled={isLoading} />
+                          <Input placeholder="https://example.com" {...field} disabled={isSaving} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -176,7 +183,7 @@ export default function CreateCompanyPage() {
                         <FormItem>
                           <FormLabel>業種（任意）</FormLabel>
                           <FormControl>
-                            <Input placeholder="IT・通信" {...field} disabled={isLoading} />
+                            <Input placeholder="IT・通信" {...field} disabled={isSaving} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -195,7 +202,7 @@ export default function CreateCompanyPage() {
                               placeholder="100" 
                               {...field} 
                               onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                              disabled={isLoading} 
+                              disabled={isSaving} 
                             />
                           </FormControl>
                           <FormMessage />
@@ -203,6 +210,33 @@ export default function CreateCompanyPage() {
                       )}
                     />
                   </div>
+
+                  <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>ステータス</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                          disabled={isSaving}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="ステータスを選択" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="active">受注</SelectItem>
+                            <SelectItem value="considering">検討中</SelectItem>
+                            <SelectItem value="inactive">失注</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   
                   <FormField
                     control={form.control}
@@ -216,7 +250,7 @@ export default function CreateCompanyPage() {
                             className="resize-none" 
                             rows={4}
                             {...field} 
-                            disabled={isLoading}
+                            disabled={isSaving}
                           />
                         </FormControl>
                         <FormMessage />
@@ -229,18 +263,18 @@ export default function CreateCompanyPage() {
                       type="button"
                       variant="outline"
                       onClick={() => router.push('/admin/companies')}
-                      disabled={isLoading}
+                      disabled={isSaving}
                     >
                       キャンセル
                     </Button>
-                    <Button type="submit" disabled={isLoading}>
-                      {isLoading ? (
+                    <Button type="submit" disabled={isSaving}>
+                      {isSaving ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           作成中...
                         </>
                       ) : (
-                        '会社を作成'
+                        '作成する'
                       )}
                     </Button>
                   </div>
