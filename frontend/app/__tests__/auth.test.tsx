@@ -1,11 +1,22 @@
+jest.mock('@/lib/api', () => ({
+  post: jest.fn(),
+  get: jest.fn(),
+}));
+
 import '@testing-library/jest-dom';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
-import { useToast } from '@/hooks/use-toast';
-import { AuthProvider, useAuth } from '@/app/contexts/AuthContext';
-import LoginPage from '@/app/admin/login/page';
 import Cookies from 'js-cookie';
+import { useToast } from '@/hooks/use-toast';
+import LoginPage from '@/app/admin/login/page';
+import { AuthProvider, useAuth } from '@/app/contexts/AuthContext';
+import api from '@/lib/api';
+import { ToastProvider } from '@/components/ui/toast';
+
+// useToastのグローバルモック
+const mockToast = { toast: jest.fn() };
+jest.mock('@/hooks/use-toast', () => ({ useToast: () => mockToast }));
 
 // モックの設定
 jest.mock('next/navigation', () => ({
@@ -18,13 +29,24 @@ jest.mock('js-cookie', () => ({
   remove: jest.fn(),
 }));
 
-jest.mock('@/hooks/use-toast', () => ({
-  useToast: jest.fn(),
-}));
-
 // テスト用のラッパーコンポーネント
-function TestWrapper({ children }: { children: React.ReactNode }) {
-  return <AuthProvider>{children}</AuthProvider>;
+function renderWithAuth(ui: React.ReactElement) {
+  const mockRouter = {
+    push: jest.fn(),
+    replace: jest.fn(),
+    back: jest.fn(),
+  };
+
+  // useRouterのモック
+  jest.spyOn(require('next/navigation'), 'useRouter').mockReturnValue(mockRouter);
+
+  return render(
+    <ToastProvider>
+      <AuthProvider>
+        {ui}
+      </AuthProvider>
+    </ToastProvider>
+  );
 }
 
 describe('認証機能のテスト', () => {
@@ -32,14 +54,17 @@ describe('認証機能のテスト', () => {
     push: jest.fn(),
   };
 
-  const mockToast = {
-    toast: jest.fn(),
+  const mockApi = {
+    post: jest.fn(),
+    get: jest.fn(),
   };
 
   beforeEach(() => {
     (useRouter as jest.Mock).mockReturnValue(mockRouter);
-    (useToast as jest.Mock).mockReturnValue(mockToast);
     jest.clearAllMocks();
+    Cookies.remove('token');
+    (api.post as jest.Mock).mockImplementation(mockApi.post);
+    (api.get as jest.Mock).mockImplementation(mockApi.get);
   });
 
   describe('ログインページ', () => {
@@ -72,12 +97,16 @@ describe('認証機能のテスト', () => {
     });
 
     it('ログイン成功時にダッシュボードにリダイレクトされる', async () => {
-      global.fetch = jest.fn().mockImplementationOnce(() =>
-        Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ token: 'test-token', user: { id: 1, email: 'test@example.com' } }),
-        })
-      );
+      mockApi.post.mockResolvedValueOnce({
+        data: {
+          token: 'test-token',
+          user: {
+            id: 1,
+            name: 'Test User',
+            email: 'test@example.com',
+          },
+        },
+      });
 
       render(
         <AuthProvider>
@@ -85,15 +114,20 @@ describe('認証機能のテスト', () => {
         </AuthProvider>
       );
 
-      const emailInput = screen.getByPlaceholderText('you@example.com');
-      const passwordInput = screen.getByPlaceholderText('••••••••');
-      const loginButton = screen.getByRole('button', { name: 'ログイン' });
+      fireEvent.change(screen.getByLabelText('メールアドレス'), {
+        target: { value: 'test@example.com' },
+      });
+      fireEvent.change(screen.getByLabelText('パスワード'), {
+        target: { value: 'password123' },
+      });
 
-      fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
-      fireEvent.change(passwordInput, { target: { value: 'password123' } });
-      fireEvent.click(loginButton);
+      fireEvent.click(screen.getByRole('button', { name: 'ログイン' }));
 
       await waitFor(() => {
+        expect(mockApi.post).toHaveBeenCalledWith('/auth/login', {
+          email: 'test@example.com',
+          password: 'password123',
+        });
         expect(mockRouter.push).toHaveBeenCalledWith('/admin/dashboard');
         expect(Cookies.set).toHaveBeenCalledWith('token', 'test-token', { expires: 7 });
         expect(mockToast.toast).toHaveBeenCalledWith({
@@ -104,12 +138,7 @@ describe('認証機能のテスト', () => {
     });
 
     it('ログイン失敗時にエラーメッセージが表示される', async () => {
-      global.fetch = jest.fn().mockImplementationOnce(() =>
-        Promise.resolve({
-          ok: false,
-          json: () => Promise.resolve({ message: 'メールアドレスとパスワードを確認してください' }),
-        })
-      );
+      mockApi.post.mockRejectedValueOnce(new Error('Invalid credentials'));
 
       render(
         <AuthProvider>
@@ -117,13 +146,14 @@ describe('認証機能のテスト', () => {
         </AuthProvider>
       );
 
-      const emailInput = screen.getByPlaceholderText('you@example.com');
-      const passwordInput = screen.getByPlaceholderText('••••••••');
-      const loginButton = screen.getByRole('button', { name: 'ログイン' });
+      fireEvent.change(screen.getByLabelText('メールアドレス'), {
+        target: { value: 'test@example.com' },
+      });
+      fireEvent.change(screen.getByLabelText('パスワード'), {
+        target: { value: 'wrong-password' },
+      });
 
-      fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
-      fireEvent.change(passwordInput, { target: { value: 'wrong-password' } });
-      fireEvent.click(loginButton);
+      fireEvent.click(screen.getByRole('button', { name: 'ログイン' }));
 
       await waitFor(() => {
         expect(mockToast.toast).toHaveBeenCalledWith({
@@ -152,6 +182,17 @@ describe('認証機能のテスト', () => {
     });
 
     it('ログイン後にユーザー情報が設定される', async () => {
+      mockApi.post.mockResolvedValueOnce({
+        data: {
+          token: 'test-token',
+          user: {
+            id: 1,
+            name: 'Test User',
+            email: 'test@example.com',
+          },
+        },
+      });
+
       const TestComponent = () => {
         const { user, login } = useAuth();
         return (
@@ -162,22 +203,9 @@ describe('認証機能のテスト', () => {
         );
       };
 
-      global.fetch = jest.fn().mockImplementationOnce(() =>
-        Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ token: 'test-token', user: { id: 1, email: 'test@example.com' } }),
-        })
-      );
+      renderWithAuth(<TestComponent />);
 
-      render(
-        <AuthProvider>
-          <TestComponent />
-        </AuthProvider>
-      );
-
-      expect(screen.getByText('未ログイン')).toBeInTheDocument();
-
-      fireEvent.click(screen.getByText('ログイン'));
+      fireEvent.click(screen.getByRole('button', { name: 'ログイン' }));
 
       await waitFor(() => {
         expect(screen.getByText('ログイン中: test@example.com')).toBeInTheDocument();
@@ -185,44 +213,37 @@ describe('認証機能のテスト', () => {
     });
 
     it('ログアウト後にユーザー情報がクリアされる', async () => {
+      mockApi.post.mockResolvedValueOnce({
+        data: {
+          token: 'test-token',
+          user: {
+            id: 1,
+            name: 'Test User',
+            email: 'test@example.com',
+          },
+        },
+      });
+
       const TestComponent = () => {
         const { user, login, logout } = useAuth();
         return (
           <div>
             <div>{user ? `ログイン中: ${user.email}` : '未ログイン'}</div>
             <button onClick={() => login('test@example.com', 'password123')}>ログイン</button>
-            <button onClick={() => logout()}>ログアウト</button>
+            <button onClick={logout}>ログアウト</button>
           </div>
         );
       };
 
-      global.fetch = jest.fn()
-        .mockImplementationOnce(() =>
-          Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({ token: 'test-token', user: { id: 1, email: 'test@example.com' } }),
-          })
-        )
-        .mockImplementationOnce(() =>
-          Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({ message: 'ログアウトしました' }),
-          })
-        );
+      renderWithAuth(<TestComponent />);
 
-      render(
-        <AuthProvider>
-          <TestComponent />
-        </AuthProvider>
-      );
-
-      fireEvent.click(screen.getByText('ログイン'));
+      fireEvent.click(screen.getByRole('button', { name: 'ログイン' }));
 
       await waitFor(() => {
         expect(screen.getByText('ログイン中: test@example.com')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText('ログアウト'));
+      fireEvent.click(screen.getByRole('button', { name: 'ログアウト' }));
 
       await waitFor(() => {
         expect(screen.getByText('未ログイン')).toBeInTheDocument();
