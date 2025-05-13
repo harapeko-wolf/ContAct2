@@ -6,6 +6,7 @@ WORKDIR /app
 COPY frontend/package*.json ./
 RUN npm install
 
+
 # アプリケーションのコピー
 COPY frontend/ .
 

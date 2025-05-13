@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -14,7 +14,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { companyApi } from '@/lib/api';
+import { companyApi, Company } from '@/lib/api';
 
 const companySchema = z.object({
   name: z.string().min(2, { message: '会社名は2文字以上必要です' }),
@@ -30,8 +30,9 @@ const companySchema = z.object({
 
 type CompanyFormValues = z.infer<typeof companySchema>;
 
-export default function CreateCompanyPage() {
-  const [isLoading, setIsLoading] = useState(false);
+export default function EditCompanyPage({ params }: { params: { id: string } }) {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -50,27 +51,67 @@ export default function CreateCompanyPage() {
     },
   });
 
+  useEffect(() => {
+    loadCompany();
+  }, [params.id]);
+
+  const loadCompany = async () => {
+    try {
+      const company = await companyApi.getById(params.id);
+      form.reset({
+        name: company.name,
+        email: company.email,
+        phone: company.phone || '',
+        address: company.address || '',
+        website: company.website || '',
+        description: company.description || '',
+        industry: company.industry || '',
+        employee_count: company.employee_count,
+        status: company.status,
+      });
+    } catch (error) {
+      toast({
+        title: 'エラー',
+        description: '会社情報の取得に失敗しました',
+        variant: 'destructive',
+      });
+      router.push('/admin/companies');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   async function onSubmit(data: CompanyFormValues) {
-    setIsLoading(true);
+    setIsSaving(true);
     
     try {
-      await companyApi.create(data);
+      await companyApi.update(params.id, data);
       
       toast({
         title: '成功',
-        description: '会社を作成しました',
+        description: '会社情報を更新しました',
       });
       
       router.push('/admin/companies');
     } catch (error) {
       toast({
         title: 'エラー',
-        description: '会社の作成に失敗しました',
+        description: '会社情報の更新に失敗しました',
         variant: 'destructive',
       });
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
+  }
+
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex-1 flex items-center justify-center p-8">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </AdminLayout>
+    );
   }
 
   return (
@@ -88,9 +129,9 @@ export default function CreateCompanyPage() {
         <div className="max-w-2xl mx-auto">
           <Card>
             <CardHeader>
-              <CardTitle className="text-2xl">新規会社を追加</CardTitle>
+              <CardTitle className="text-2xl">会社情報を編集</CardTitle>
               <CardDescription>
-                資料を共有する会社のプロフィールを作成
+                会社のプロフィール情報を更新
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -103,7 +144,7 @@ export default function CreateCompanyPage() {
                       <FormItem>
                         <FormLabel>会社名</FormLabel>
                         <FormControl>
-                          <Input placeholder="株式会社テクノソリューション" {...field} disabled={isLoading} />
+                          <Input placeholder="株式会社テクノソリューション" {...field} disabled={isSaving} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -118,7 +159,7 @@ export default function CreateCompanyPage() {
                         <FormItem>
                           <FormLabel>メールアドレス</FormLabel>
                           <FormControl>
-                            <Input placeholder="info@example.com" type="email" {...field} disabled={isLoading} />
+                            <Input placeholder="info@example.com" type="email" {...field} disabled={isSaving} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -132,7 +173,7 @@ export default function CreateCompanyPage() {
                         <FormItem>
                           <FormLabel>電話番号（任意）</FormLabel>
                           <FormControl>
-                            <Input placeholder="03-1234-5678" {...field} disabled={isLoading} />
+                            <Input placeholder="03-1234-5678" {...field} disabled={isSaving} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -147,7 +188,7 @@ export default function CreateCompanyPage() {
                       <FormItem>
                         <FormLabel>住所（任意）</FormLabel>
                         <FormControl>
-                          <Input placeholder="東京都千代田区丸の内1-1-1" {...field} disabled={isLoading} />
+                          <Input placeholder="東京都千代田区丸の内1-1-1" {...field} disabled={isSaving} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -161,7 +202,7 @@ export default function CreateCompanyPage() {
                       <FormItem>
                         <FormLabel>Webサイト（任意）</FormLabel>
                         <FormControl>
-                          <Input placeholder="https://example.com" {...field} disabled={isLoading} />
+                          <Input placeholder="https://example.com" {...field} disabled={isSaving} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -176,7 +217,7 @@ export default function CreateCompanyPage() {
                         <FormItem>
                           <FormLabel>業種（任意）</FormLabel>
                           <FormControl>
-                            <Input placeholder="IT・通信" {...field} disabled={isLoading} />
+                            <Input placeholder="IT・通信" {...field} disabled={isSaving} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -195,7 +236,7 @@ export default function CreateCompanyPage() {
                               placeholder="100" 
                               {...field} 
                               onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                              disabled={isLoading} 
+                              disabled={isSaving} 
                             />
                           </FormControl>
                           <FormMessage />
@@ -216,7 +257,7 @@ export default function CreateCompanyPage() {
                             className="resize-none" 
                             rows={4}
                             {...field} 
-                            disabled={isLoading}
+                            disabled={isSaving}
                           />
                         </FormControl>
                         <FormMessage />
@@ -229,18 +270,18 @@ export default function CreateCompanyPage() {
                       type="button"
                       variant="outline"
                       onClick={() => router.push('/admin/companies')}
-                      disabled={isLoading}
+                      disabled={isSaving}
                     >
                       キャンセル
                     </Button>
-                    <Button type="submit" disabled={isLoading}>
-                      {isLoading ? (
+                    <Button type="submit" disabled={isSaving}>
+                      {isSaving ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          作成中...
+                          更新中...
                         </>
                       ) : (
-                        '会社を作成'
+                        '更新する'
                       )}
                     </Button>
                   </div>
@@ -252,4 +293,4 @@ export default function CreateCompanyPage() {
       </div>
     </AdminLayout>
   );
-}
+} 
