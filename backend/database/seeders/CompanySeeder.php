@@ -15,9 +15,13 @@ class CompanySeeder extends Seeder
      */
     public function run(): void
     {
+        // 既存のテストユーザーを取得
+        $user = \App\Models\User::where('email', 'test@example.com')->first();
+
         $companies = [
             [
                 'id' => Str::uuid(),
+                'user_id' => $user->id,
                 'name' => '株式会社テクノソリューション',
                 'email' => 'info@technosolution.example.com',
                 'phone' => '03-1234-5678',
@@ -32,6 +36,7 @@ class CompanySeeder extends Seeder
             ],
             [
                 'id' => Str::uuid(),
+                'user_id' => $user->id,
                 'name' => 'グリーンエナジー株式会社',
                 'email' => 'contact@greenenergy.example.com',
                 'phone' => '06-9876-5432',
@@ -46,6 +51,7 @@ class CompanySeeder extends Seeder
             ],
             [
                 'id' => Str::uuid(),
+                'user_id' => $user->id,
                 'name' => 'フューチャーヘルスケア株式会社',
                 'email' => 'info@futurehealthcare.example.com',
                 'phone' => '052-123-4567',

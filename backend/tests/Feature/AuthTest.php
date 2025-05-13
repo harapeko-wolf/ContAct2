@@ -19,7 +19,7 @@ class AuthTest extends TestCase
             'password' => 'password123',
         ];
 
-        $response = $this->postJson('/api/register', $userData);
+        $response = $this->postJson('/api/auth/register', $userData);
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -44,7 +44,7 @@ class AuthTest extends TestCase
             'password' => '123',
         ];
 
-        $response = $this->postJson('/api/register', $userData);
+        $response = $this->postJson('/api/auth/register', $userData);
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['name', 'email', 'password']);
@@ -64,7 +64,7 @@ class AuthTest extends TestCase
             'password' => 'password123',
         ];
 
-        $response = $this->postJson('/api/register', $userData);
+        $response = $this->postJson('/api/auth/register', $userData);
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['email']);
@@ -83,7 +83,7 @@ class AuthTest extends TestCase
             'password' => 'password123',
         ];
 
-        $response = $this->postJson('/api/login', $loginData);
+        $response = $this->postJson('/api/auth/login', $loginData);
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -103,7 +103,7 @@ class AuthTest extends TestCase
             'password' => 'wrong-password',
         ];
 
-        $response = $this->postJson('/api/login', $loginData);
+        $response = $this->postJson('/api/auth/login', $loginData);
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['email']);
@@ -120,7 +120,7 @@ class AuthTest extends TestCase
         $token = $user->createToken('auth-token')->plainTextToken;
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->postJson('/api/logout');
+            ->postJson('/api/auth/logout');
 
         $response->assertStatus(200)
             ->assertJson(['message' => 'ログアウトしました。']);
@@ -139,7 +139,7 @@ class AuthTest extends TestCase
         $token = $user->createToken('auth-token')->plainTextToken;
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->getJson('/api/user');
+            ->getJson('/api/auth/user');
 
         $response->assertStatus(200)
             ->assertJson([
@@ -151,7 +151,7 @@ class AuthTest extends TestCase
 
     public function test_unauthenticated_user_cannot_access_protected_routes()
     {
-        $response = $this->getJson('/api/user');
+        $response = $this->getJson('/api/auth/user');
 
         $response->assertStatus(401);
     }

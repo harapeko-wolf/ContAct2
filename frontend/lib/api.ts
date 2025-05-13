@@ -1,15 +1,18 @@
 import axios from 'axios';
+import Cookies from 'js-cookie';
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api',
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
   },
+  withCredentials: true,
 });
 
 // リクエストインターセプター
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const token = Cookies.get('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -21,8 +24,8 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+      Cookies.remove('token');
+      window.location.href = '/admin/login';
     }
     return Promise.reject(error);
   }
