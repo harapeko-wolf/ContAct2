@@ -38,7 +38,7 @@ export interface Company {
   description?: string;
   industry?: string;
   employee_count?: number;
-  status: 'active' | 'inactive';
+  status: 'active' | 'considering' | 'inactive';
   created_at: string;
   updated_at: string;
 }

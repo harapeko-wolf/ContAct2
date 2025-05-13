@@ -19,11 +19,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { companyApi, Company, PaginatedResponse } from '@/lib/api';
-
-// ステータスの定義
-const STATUS_OPTIONS = ['すべて', '受注', '検討中', '失注'] as const;
-type StatusType = typeof STATUS_OPTIONS[number];
-
 import AdminLayout from '@/components/admin/layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,6 +29,16 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -44,6 +49,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// ステータスの定義
+const STATUS_OPTIONS = ['すべて', '受注', '検討中', '失注'] as const;
+type StatusType = typeof STATUS_OPTIONS[number];
+
+const STATUS_MAP = {
+  'active': '受注',
+  'considering': '検討中',
+  'inactive': '失注',
+} as const;
+
+const REVERSE_STATUS_MAP = {
+  '受注': 'active',
+  '検討中': 'considering',
+  '失注': 'inactive',
+} as const;
+
 export default function CompaniesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<StatusType>('すべて');
@@ -53,6 +74,15 @@ export default function CompaniesPage() {
   const [perPage, setPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [statusChangeDialog, setStatusChangeDialog] = useState<{
+    isOpen: boolean;
+    companyId: string | null;
+    newStatus: 'active' | 'considering' | 'inactive' | null;
+  }>({
+    isOpen: false,
+    companyId: null,
+    newStatus: null,
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -101,12 +131,54 @@ export default function CompaniesPage() {
     }
   };
 
+  const handleStatusChange = async (companyId: string, newStatus: 'active' | 'considering' | 'inactive') => {
+    try {
+      const company = companies.find(c => c.id === companyId);
+      if (!company) return;
+
+      const updatedCompany = await companyApi.update(companyId, {
+        name: company.name,
+        email: company.email,
+        phone: company.phone,
+        address: company.address,
+        website: company.website,
+        description: company.description,
+        industry: company.industry,
+        employee_count: company.employee_count,
+        status: newStatus
+      });
+      
+      setCompanies(prevCompanies => 
+        prevCompanies.map(c => c.id === companyId ? updatedCompany : c)
+      );
+      
+      toast({
+        title: '成功',
+        description: 'ステータスを更新しました',
+      });
+    } catch (error) {
+      console.error('ステータス更新エラー:', error);
+      toast({
+        title: 'エラー',
+        description: 'ステータスの更新に失敗しました',
+        variant: 'destructive',
+      });
+    } finally {
+      setStatusChangeDialog({
+        isOpen: false,
+        companyId: null,
+        newStatus: null,
+      });
+    }
+  };
+
   const filteredCompanies = companies.filter(company => {
     const matchesSearch = 
       company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       company.email.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStatus = selectedStatus === 'すべて' || company.status === selectedStatus;
+    const matchesStatus = selectedStatus === 'すべて' || 
+      (selectedStatus in REVERSE_STATUS_MAP && company.status === REVERSE_STATUS_MAP[selectedStatus]);
     
     return matchesSearch && matchesStatus;
   });
@@ -187,9 +259,10 @@ export default function CompaniesPage() {
                       <span className={cn(
                         "px-2 py-0.5 text-xs font-medium rounded-full",
                         company.status === 'active' && "bg-green-100 text-green-700",
+                        company.status === 'considering' && "bg-blue-100 text-blue-700",
                         company.status === 'inactive' && "bg-red-100 text-red-700"
                       )}>
-                        {company.status === 'active' ? '受注' : '失注'}
+                        {STATUS_MAP[company.status]}
                       </span>
                     </div>
                     <CardTitle className="text-xl">
@@ -202,7 +275,7 @@ export default function CompaniesPage() {
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
+                    <DropdownMenuContent align="end" onCloseAutoFocus={(e) => e.preventDefault()}>
                       <DropdownMenuItem 
                         className="gap-2 cursor-pointer"
                         onClick={() => copyLink(company.id)}
@@ -210,25 +283,78 @@ export default function CompaniesPage() {
                         <ClipboardCopy className="h-4 w-4" />
                         リンクをコピー
                       </DropdownMenuItem>
-                      <Link href={`/admin/companies/${company.id}/edit`}>
-                        <DropdownMenuItem className="gap-2 cursor-pointer">
+                      <DropdownMenuItem asChild>
+                        <Link href={`/admin/companies/${company.id}/edit`} className="gap-2 cursor-pointer">
                           <Edit className="h-4 w-4" />
                           会社を編集
-                        </DropdownMenuItem>
-                      </Link>
-                      <Link href={`/admin/companies/${company.id}/pdfs`}>
-                        <DropdownMenuItem className="gap-2 cursor-pointer">
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href={`/admin/companies/${company.id}/pdfs`} className="gap-2 cursor-pointer">
                           <FileText className="h-4 w-4" />
                           PDF管理
-                        </DropdownMenuItem>
-                      </Link>
+                        </Link>
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <Link href={`/admin/companies/${company.id}/access-log`}>
-                        <DropdownMenuItem className="gap-2 cursor-pointer">
+                      <DropdownMenuItem className="gap-2 cursor-pointer">
+                        <BarChart3 className="h-4 w-4" />
+                        ステータスを変更
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-6 px-2 ml-auto">
+                              {STATUS_MAP[company.status]}
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" onCloseAutoFocus={(e) => e.preventDefault()}>
+                            <DropdownMenuItem 
+                              onClick={() => setStatusChangeDialog({
+                                isOpen: true,
+                                companyId: company.id,
+                                newStatus: 'active'
+                              })}
+                              className={cn(
+                                "gap-2 cursor-pointer",
+                                company.status === 'active' && "bg-green-50"
+                              )}
+                            >
+                              受注
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => setStatusChangeDialog({
+                                isOpen: true,
+                                companyId: company.id,
+                                newStatus: 'considering'
+                              })}
+                              className={cn(
+                                "gap-2 cursor-pointer",
+                                company.status === 'considering' && "bg-blue-50"
+                              )}
+                            >
+                              検討中
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => setStatusChangeDialog({
+                                isOpen: true,
+                                companyId: company.id,
+                                newStatus: 'inactive'
+                              })}
+                              className={cn(
+                                "gap-2 cursor-pointer",
+                                company.status === 'inactive' && "bg-red-50"
+                              )}
+                            >
+                              失注
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link href={`/admin/companies/${company.id}/access-log`} className="gap-2 cursor-pointer">
                           <Eye className="h-4 w-4" />
                           アクセスログを表示
-                        </DropdownMenuItem>
-                      </Link>
+                        </Link>
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem 
                         className="gap-2 cursor-pointer text-red-600"
@@ -376,6 +502,40 @@ export default function CompaniesPage() {
             </div>
           </div>
         )}
+
+        <AlertDialog 
+          open={statusChangeDialog.isOpen} 
+          onOpenChange={(open) => {
+            if (!open) {
+              setStatusChangeDialog({
+                isOpen: false,
+                companyId: null,
+                newStatus: null,
+              });
+            }
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>ステータスを変更</AlertDialogTitle>
+              <AlertDialogDescription>
+                ステータスを変更してもよろしいですか？
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>キャンセル</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (statusChangeDialog.companyId && statusChangeDialog.newStatus) {
+                    handleStatusChange(statusChangeDialog.companyId, statusChangeDialog.newStatus);
+                  }
+                }}
+              >
+                変更する
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AdminLayout>
   );

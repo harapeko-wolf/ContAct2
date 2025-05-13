@@ -28,7 +28,7 @@ class CompanyController extends Controller
             'description' => 'nullable|string',
             'industry' => 'nullable|string|max:100',
             'employee_count' => 'nullable|integer',
-            'status' => 'required|string|in:active,inactive',
+            'status' => 'required|string|in:active,considering,inactive',
         ]);
 
         if ($validator->fails()) {
@@ -70,7 +70,7 @@ class CompanyController extends Controller
             'description' => 'nullable|string',
             'industry' => 'nullable|string|max:100',
             'employee_count' => 'nullable|integer',
-            'status' => 'required|string|in:active,inactive',
+            'status' => 'required|string|in:active,considering,inactive',
         ]);
 
         if ($validator->fails()) {
