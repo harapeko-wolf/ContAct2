@@ -30,6 +30,15 @@ class Company extends Model
         'employee_count' => 'integer',
     ];
 
+    protected $attributes = [
+        'phone' => null,
+        'address' => null,
+        'website' => null,
+        'description' => null,
+        'industry' => null,
+        'employee_count' => null,
+    ];
+
     public function documents()
     {
         return $this->hasMany(Document::class);

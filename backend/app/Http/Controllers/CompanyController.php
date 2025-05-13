@@ -21,64 +21,61 @@ class CompanyController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:companies',
+            'email' => 'required|email|max:255|unique:companies,email',
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string',
             'website' => 'nullable|url',
             'description' => 'nullable|string',
             'industry' => 'nullable|string|max:100',
             'employee_count' => 'nullable|integer',
-            'status' => 'required|string|in:active,considering,inactive',
+            'status' => 'required|in:active,considering,inactive',
         ]);
-
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            return response()->json([
+                'error' => [
+                    'code' => 'VALIDATION_ERROR',
+                    'message' => 'バリデーションエラー',
+                    'details' => $validator->errors()
+                ]
+            ], 422);
         }
-
-        $company = Company::create([
-            'id' => Str::uuid(),
-            'name' => $request->name,
-            'email' => $request->email,
-            'phone' => $request->phone,
-            'address' => $request->address,
-            'website' => $request->website,
-            'description' => $request->description,
-            'industry' => $request->industry,
-            'employee_count' => $request->employee_count,
-            'status' => $request->status,
-        ]);
-
-        return response()->json($company, 201);
+        $data = $validator->validated();
+        $data['id'] = (string) \Illuminate\Support\Str::uuid();
+        $company = Company::create($data);
+        return response()->json(['data' => $company->toArray()], 201);
     }
 
     public function show($id)
     {
         $company = Company::findOrFail($id);
-        return response()->json($company);
+        return response()->json(['data' => $company->toArray()]);
     }
 
     public function update(Request $request, $id)
     {
         $company = Company::findOrFail($id);
-
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:companies,email,' . $id . ',id',
+            'email' => 'required|email|max:255|unique:companies,email,' . $id,
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string',
             'website' => 'nullable|url',
             'description' => 'nullable|string',
             'industry' => 'nullable|string|max:100',
             'employee_count' => 'nullable|integer',
-            'status' => 'required|string|in:active,considering,inactive',
+            'status' => 'required|in:active,considering,inactive',
         ]);
-
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            return response()->json([
+                'error' => [
+                    'code' => 'VALIDATION_ERROR',
+                    'message' => 'バリデーションエラー',
+                    'details' => $validator->errors()
+                ]
+            ], 422);
         }
-
-        $company->update($request->all());
-        return response()->json($company);
+        $company->update($validator->validated());
+        return response()->json(['data' => $company->toArray()]);
     }
 
     public function destroy($id)
