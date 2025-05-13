@@ -16,9 +16,9 @@ use App\Http\Controllers\CompanyController;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
+// 認証不要のルート
+Route::post('/auth/register', [AuthController::class, 'register']);
+Route::post('/auth/login', [AuthController::class, 'login']);
 
 // ヘルスチェック用のエンドポイント
 Route::get('/health', function () {
@@ -29,14 +29,11 @@ Route::get('/health', function () {
     ]);
 });
 
-// 認証不要のルート
-Route::post('/auth/register', [AuthController::class, 'register']);
-Route::post('/auth/login', [AuthController::class, 'login']);
-
 // 認証が必要なルート
 Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/user', [AuthController::class, 'user']);
-});
+    Route::post('/auth/logout', [AuthController::class, 'logout']);
 
-Route::apiResource('companies', CompanyController::class);
+    // 会社関連のルート
+    Route::apiResource('companies', CompanyController::class);
+});

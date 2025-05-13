@@ -62,13 +62,13 @@ describe('EditCompanyPage', () => {
       await userEvent.clear(screen.getByLabelText('会社名'))
       await userEvent.clear(screen.getByLabelText('メールアドレス'))
     })
-    // 送信ボタンを取得
-    const submitButton = await screen.findByRole('button', { name: '更新する' })
+    // 送信ボタンを取得してクリック
+    const submitButton = screen.getByRole('button', { name: /更新する/i })
     await act(async () => {
       await userEvent.click(submitButton)
     })
     // エラーメッセージの確認
-    expect(screen.getByText('会社名は2文字以上必要です')).toBeInTheDocument()
+    expect(screen.getByText('会社名は必須です')).toBeInTheDocument()
     expect(screen.getByText('有効なメールアドレスを入力してください')).toBeInTheDocument()
   })
 
@@ -85,7 +85,8 @@ describe('EditCompanyPage', () => {
       await userEvent.clear(screen.getByLabelText('会社名'))
       await userEvent.type(screen.getByLabelText('会社名'), '更新後株式会社')
     })
-    const submitButton = await screen.findByRole('button', { name: '更新する' })
+    // 送信ボタンを取得してクリック
+    const submitButton = screen.getByRole('button', { name: /更新する/i })
     await act(async () => {
       await userEvent.click(submitButton)
     })

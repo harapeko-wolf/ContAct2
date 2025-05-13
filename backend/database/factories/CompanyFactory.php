@@ -13,6 +13,7 @@ class CompanyFactory extends Factory
     {
         return [
             'id' => (string) \Illuminate\Support\Str::uuid(),
+            'user_id' => \App\Models\User::factory(),
             'name' => $this->faker->company(),
             'email' => $this->faker->unique()->companyEmail(),
             'phone' => $this->faker->phoneNumber(),

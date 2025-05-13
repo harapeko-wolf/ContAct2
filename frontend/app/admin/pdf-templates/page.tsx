@@ -455,7 +455,10 @@ export default function PDFTemplatesPage() {
           <Dialog open={!!previewUrl} onOpenChange={() => setPreviewUrl(null)}>
             <DialogContent className="max-w-4xl">
               <DialogHeader>
-                <DialogTitle>PDFプレビュー</DialogTitle>
+                <DialogTitle>PDFテンプレートのプレビュー</DialogTitle>
+                <DialogDescription>
+                  作成したPDFテンプレートのプレビューを表示します。
+                </DialogDescription>
               </DialogHeader>
               <div className="aspect-video">
                 <iframe
