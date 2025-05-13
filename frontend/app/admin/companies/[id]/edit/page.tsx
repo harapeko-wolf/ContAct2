@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { use } from 'react';
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 
 import AdminLayout from '@/components/admin/layout';
 import { Button } from '@/components/ui/button';
@@ -31,8 +32,8 @@ const companySchema = z.object({
 
 type CompanyFormValues = z.infer<typeof companySchema>;
 
-export default function EditCompanyPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params);
+export default function EditCompanyPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
@@ -55,11 +56,11 @@ export default function EditCompanyPage({ params }: { params: Promise<{ id: stri
 
   useEffect(() => {
     loadCompany();
-  }, [resolvedParams.id]);
+  }, [id]);
 
   const loadCompany = async () => {
     try {
-      const company = await companyApi.getById(resolvedParams.id);
+      const company = await companyApi.getById(id);
       form.reset({
         name: company.name,
         email: company.email,
@@ -85,15 +86,12 @@ export default function EditCompanyPage({ params }: { params: Promise<{ id: stri
 
   async function onSubmit(data: CompanyFormValues) {
     setIsSaving(true);
-    
     try {
-      await companyApi.update(resolvedParams.id, data);
-      
+      await companyApi.update(id, data);
       toast({
         title: '成功',
         description: '会社情報を更新しました',
       });
-      
       router.push('/admin/companies');
     } catch (error) {
       toast({
@@ -110,7 +108,7 @@ export default function EditCompanyPage({ params }: { params: Promise<{ id: stri
     return (
       <AdminLayout>
         <div className="flex-1 flex items-center justify-center p-8">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" role="status" />
         </div>
       </AdminLayout>
     );
@@ -266,6 +264,27 @@ export default function EditCompanyPage({ params }: { params: Promise<{ id: stri
                       </FormItem>
                     )}
                   />
+
+                  <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>ステータス</FormLabel>
+                        <FormControl>
+                          <Select value={field.value} onValueChange={field.onChange} disabled={isSaving}>
+                            <SelectTrigger aria-label="ステータス" />
+                            <SelectContent>
+                              <SelectItem value="active">受注</SelectItem>
+                              <SelectItem value="considering">検討中</SelectItem>
+                              <SelectItem value="inactive">失注</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   
                   <div className="flex gap-4">
                     <Button
@@ -279,7 +298,7 @@ export default function EditCompanyPage({ params }: { params: Promise<{ id: stri
                     <Button type="submit" disabled={isSaving}>
                       {isSaving ? (
                         <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" role="status" />
                           更新中...
                         </>
                       ) : (
