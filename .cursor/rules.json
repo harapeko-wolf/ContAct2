@@ -44,20 +44,30 @@
     },
     "security": {
       "noSecretsInCode": true,
-      "noHardcodedCredentials": true
+      "noHardcodedCredentials": true,
+      "requireEnvFile": true,
+      "requireSecureStorage": true
     },
     "documentation": {
       "requireReadme": true,
       "requireApiDocs": true,
-      "requireCodeComments": true
+      "requireCodeComments": true,
+      "requireDesignDocs": true
     },
     "testing": {
       "requireTests": true,
-      "minCoverage": 80
+      "minCoverage": 80,
+      "requireE2ETests": true
     },
     "dependencies": {
       "allowDevDependencies": true,
-      "requireExactVersions": true
+      "requireExactVersions": true,
+      "requireLockFiles": true
+    },
+    "docker": {
+      "requireHealthChecks": true,
+      "requireMultiStageBuild": true,
+      "requireSecurityScan": true
     }
   }
 }
