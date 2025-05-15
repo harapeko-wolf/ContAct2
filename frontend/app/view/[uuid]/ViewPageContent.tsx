@@ -17,6 +17,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
+import { pdfApi, companyApi, PDF } from '@/lib/api';
 
 // PDFビューワーを動的にインポート（クライアントサイドのみ）
 const PDFViewer = dynamic(() => import('./PDFViewer'), {
@@ -56,23 +57,43 @@ const surveyOptions = [
 ];
 
 export default function ViewPageContent({ uuid }: { uuid: string }) {
+  const [companyName, setCompanyName] = useState('');
+  const [documents, setDocuments] = useState<PDF[]>([]);
   const [interestLevel, setInterestLevel] = useState<string | null>(null);
   const [hasCompletedSurvey, setHasCompletedSurvey] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showBookingPrompt, setShowBookingPrompt] = useState(false);
   const [hasReachedLastPage, setHasReachedLastPage] = useState(false);
-  const [startedDocuments, setStartedDocuments] = useState<number[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<{ [id: string]: string }>({});
+  const [startedDocuments, setStartedDocuments] = useState<string[]>([]);
+  const [finishedDocs, setFinishedDocs] = useState<string[]>([]);
   const router = useRouter();
   const { toast } = useToast();
 
-  // ページ読み込みのシミュレーション
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
-    
-    return () => clearTimeout(timer);
-  }, []);
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const company = await companyApi.getById(uuid);
+        setCompanyName(company.name);
+        const pdfs = await pdfApi.getAll(uuid);
+        setDocuments(pdfs.data);
+        // プレビューURLも取得
+        const urls: { [id: string]: string } = {};
+        for (const doc of pdfs.data) {
+          urls[doc.id] = await pdfApi.getPreviewUrl(uuid, doc.id);
+        }
+        setPreviewUrls(urls);
+      } catch {
+        setCompanyName('会社名取得エラー');
+        setDocuments([]);
+        setPreviewUrls({});
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, [uuid]);
   
   // アンケート送信の処理
   const handleSurveySubmit = () => {
@@ -97,9 +118,8 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
   };
 
   // 最終ページ到達時の処理
-  const handleLastPage = (isLastPage: boolean) => {
-    if (isLastPage && !hasReachedLastPage) {
-      setHasReachedLastPage(true);
+  const handleLastPage = (docId: string, isLastPage: boolean) => {
+    if (isLastPage) {
       setShowBookingPrompt(true);
     }
   };
@@ -158,12 +178,12 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 border-r pr-4 py-1">
               <FileText className="h-5 w-5 text-blue-600" />
-              <span className="font-medium">{documentData.companyName}</span>
+              <span className="font-medium">{companyName}</span>
             </div>
             <div className="flex items-center gap-4">
               <div className="text-sm flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded-lg">
                 <span className="text-muted-foreground">資料数:</span>
-                <span className="font-medium text-blue-600">{documentData.documents.length}件</span>
+                <span className="font-medium text-blue-600">{documents.length}件</span>
               </div>
             </div>
           </div>
@@ -176,7 +196,7 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
         {/* 複数のPDFビューワー */}
         <div className="w-full max-w-5xl">
           <div className="flex gap-2 overflow-x-auto pb-2 px-1 mb-4 sticky top-[64px] z-10">
-            {documentData.documents.map((doc, index) => (
+            {documents.map((doc, index) => (
               <button
                 key={doc.id}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-colors ${
@@ -199,7 +219,7 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
           </div>
 
           <div className="space-y-12">
-            {documentData.documents.map((doc, index) => (
+            {documents.map((doc, index) => (
               <div key={doc.id} id={`pdf-${doc.id}`} className="space-y-4">
                 <div className="relative flex items-center justify-between bg-gradient-to-r from-blue-50 to-white p-4 rounded-lg border">
                   <div className="flex items-center gap-4">
@@ -208,45 +228,45 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
                     </div>
                     <div>
                       <h2 className="text-xl font-medium">{doc.title}</h2>
-                      <p className="text-sm text-muted-foreground">
-                        全{doc.totalPages}ページ
-                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="px-3 py-1.5 bg-blue-100 text-blue-600 rounded-lg font-medium text-sm flex items-center gap-2">
                       <span className="text-xs text-blue-500">資料</span>
-                      <span>{index + 1} / {documentData.documents.length}</span>
+                      <span>{index + 1} / {documents.length}</span>
                     </div>
                   </div>
                 </div>
                 <div className="relative">
-                <PDFViewer 
-                  pdfUrl={doc.url}
-                  key={doc.id}
-                  onLastPage={index === documentData.documents.length - 1 ? handleLastPage : undefined}
-                />
-                {!startedDocuments.includes(doc.id) && (
-                  <div className="absolute inset-0 bg-white/10 backdrop-blur-sm flex items-center justify-center">
-                    <Button
-                      size="lg"
-                      className="gap-2"
-                      onClick={() => {
-                        setStartedDocuments(prev => [...prev, doc.id]);
-                        toast({
-                          title: '閲覧を開始しました',
-                          description: `${doc.title}の閲覧データを記録しています`,
-                        });
-                      }}
-                    >
-                      <FileText className="h-4 w-4" />
-                      閲覧
-                    </Button>
-                    
-                  </div>
-                
-                )}
-              </div>
+                  {previewUrls[doc.id] ? (
+                    <PDFViewer
+                      pdfUrl={previewUrls[doc.id]}
+                      key={doc.id}
+                      onLastPage={(isLastPage) => handleLastPage(doc.id, isLastPage)}
+                      isActive={startedDocuments.includes(doc.id)}
+                    />
+                  ) : (
+                    <div className="text-red-500 p-4">PDFのURL取得に失敗しました</div>
+                  )}
+                  {!startedDocuments.includes(doc.id) && (
+                    <div className="absolute inset-0 bg-white/10 backdrop-blur-sm flex items-center justify-center">
+                      <Button
+                        size="lg"
+                        className="gap-2"
+                        onClick={() => {
+                          setStartedDocuments(prev => [...prev, doc.id]);
+                          toast({
+                            title: '閲覧を開始しました',
+                            description: `${doc.title}の閲覧データを記録しています`,
+                          });
+                        }}
+                      >
+                        <FileText className="h-4 w-4" />
+                        閲覧
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
           </div>

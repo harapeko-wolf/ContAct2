@@ -46,12 +46,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       label: '会社管理',
       active: pathname.includes('/admin/companies'),
     },
-    {
-      icon: FileStack,
-      href: '/admin/pdf-templates',
-      label: 'PDFテンプレート',
-      active: pathname.includes('/admin/pdf-templates'),
-    },
+    // {
+    //   icon: FileStack,
+    //   href: '/admin/pdf-templates',
+    //   label: 'PDFテンプレート',
+    //   active: pathname.includes('/admin/pdf-templates'),
+    // },
     {
       icon: Settings,
       href: '/admin/settings',

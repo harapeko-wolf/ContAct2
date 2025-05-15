@@ -15,9 +15,10 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 export interface PDFViewerProps {
   pdfUrl: string;
   onLastPage?: (isLastPage: boolean) => void;
+  isActive?: boolean;
 }
 
-const PDFViewer: React.FC<PDFViewerProps> = ({ pdfUrl, onLastPage }) => {
+const PDFViewer: React.FC<PDFViewerProps> = ({ pdfUrl, onLastPage, isActive }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [scale, setScale] = useState(1);
@@ -39,20 +40,6 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ pdfUrl, onLastPage }) => {
     window.addEventListener('resize', updateScale);
     return () => window.removeEventListener('resize', updateScale);
   }, []);
-
-  // キーボードナビゲーション
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') {
-        handlePrevPage();
-      } else if (e.key === 'ArrowRight') {
-        handleNextPage();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentPage, totalPages]);
 
   // PDFの読み込みと表示の処理
   useEffect(() => {

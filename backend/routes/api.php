@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\Api\DocumentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -36,4 +37,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // 会社関連のルート
     Route::apiResource('companies', CompanyController::class);
+
+    // PDF関連のルート
+    Route::apiResource('documents', DocumentController::class);
+    Route::get('documents/{document}/download', [DocumentController::class, 'download']);
+    Route::get('documents/{document}/preview', [DocumentController::class, 'preview']);
 });
