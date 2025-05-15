@@ -58,10 +58,10 @@ export default function CompanyPdfsPage({ params }: { params: { id: string } }) 
   return (
     <AdminLayout>
       <div className="flex-1 p-8">
-        <PDFListClient initialPdfs={pdfList} companyId={params.id} />
+        <PDFListClient companyId={params.id} />
         
         {/* アップロードカード */}
-        <Card className="border-dashed border-2 border-gray-200 bg-gray-50">
+        {/* <Card className="border-dashed border-2 border-gray-200 bg-gray-50">
           <CardContent className="p-6 flex flex-col items-center justify-center h-full text-center">
             <FileUp className="h-10 w-10 text-gray-400 mb-4" />
             <h3 className="font-medium mb-1">新規資料をアップロード</h3>
@@ -71,7 +71,7 @@ export default function CompanyPdfsPage({ params }: { params: { id: string } }) 
               PDFをアップロード
             </Button>
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
     </AdminLayout>
   );

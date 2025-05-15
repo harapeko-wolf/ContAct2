@@ -14,20 +14,19 @@ class Document extends Model
     public $incrementing = false;
 
     protected $fillable = [
+        'id',
         'company_id',
         'title',
         'file_path',
         'file_name',
         'file_size',
         'mime_type',
-        'page_count',
         'status',
         'metadata',
     ];
 
     protected $casts = [
         'file_size' => 'integer',
-        'page_count' => 'integer',
         'metadata' => 'array',
     ];
 
