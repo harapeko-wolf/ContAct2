@@ -20,12 +20,14 @@ interface Template {
   pdfs: {
     id: number;
     title: string;
+    description?: string;
     pages: number;
     uploadDate: string;
     fileSize: string;
     views: number;
     visible: boolean;
     enabled: boolean;
+    url?: string;
   }[];
 }
 
@@ -103,7 +105,7 @@ export default function PDFTemplatesPage() {
       const updatedTemplate = {
         ...selectedTemplate,
         pdfs: selectedTemplate.pdfs.map(pdf =>
-          pdf.id === selectedPdf
+          pdf.id === parseInt(selectedPdf || '0')
             ? { ...pdf, name: file.name }
             : pdf
         ),
@@ -154,8 +156,8 @@ export default function PDFTemplatesPage() {
     setSelectedTemplate({
       ...selectedTemplate,
       pdfs: selectedTemplate.pdfs.map(pdf => 
-        pdf.id === pdfId ? { ...pdf, enabled: !pdf.enabled } : pdf
-      ),
+        pdf.id === parseInt(pdfId) ? { ...pdf, enabled: !pdf.enabled } : pdf
+      )
     });
   };
 
@@ -299,7 +301,7 @@ export default function PDFTemplatesPage() {
                                       <div>
                                         <p className="font-medium">{pdf.title}</p>
                                         <p className="text-sm text-muted-foreground">
-                                          {pdf.description}
+                                          {pdf.description || pdf.title}
                                         </p>
                                       </div>
                                     </div>
@@ -309,7 +311,7 @@ export default function PDFTemplatesPage() {
                                         size="sm"
                                         className="gap-2"
                                         onClick={() => {
-                                          setPreviewUrl(pdf.url);
+                                          setPreviewUrl(pdf.url || '');
                                         }}
                                       >
                                         <Eye className="h-4 w-4" />
@@ -460,7 +462,7 @@ export default function PDFTemplatesPage() {
                   作成したPDFテンプレートのプレビューを表示します。
                 </DialogDescription>
               </DialogHeader>
-              <div className="aspect-video">
+              <div className="aspect-[16/9]">
                 <iframe
                   src={previewUrl || ''}
                   className="w-full h-full"
