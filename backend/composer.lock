@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "f88250eda9e542fea571584b699e27fe",
+    "content-hash": "0b7529f334348a4f99c705c796bb02cd",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -3621,6 +3621,66 @@
                 }
             ],
             "time": "2024-04-27T21:32:50+00:00"
+        },
+        {
+            "name": "spatie/pdf-to-image",
+            "version": "1.2.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/spatie/pdf-to-image.git",
+                "reference": "9a5cb264a99e87e010c65d4ece03b51f821d55bd"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/spatie/pdf-to-image/zipball/9a5cb264a99e87e010c65d4ece03b51f821d55bd",
+                "reference": "9a5cb264a99e87e010c65d4ece03b51f821d55bd",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.5.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "4.*",
+                "scrutinizer/ocular": "~1.1"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Spatie\\PdfToImage\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Freek Van der Herten",
+                    "email": "freek@spatie.be",
+                    "homepage": "https://spatie.be",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Convert a pdf to an image",
+            "homepage": "https://github.com/spatie/pdf-to-image",
+            "keywords": [
+                "convert",
+                "image",
+                "pdf",
+                "pdf-to-image",
+                "spatie"
+            ],
+            "support": {
+                "issues": "https://github.com/spatie/pdf-to-image/issues",
+                "source": "https://github.com/spatie/pdf-to-image/tree/1.2.2"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/spatie",
+                    "type": "github"
+                }
+            ],
+            "time": "2016-12-14T15:37:00+00:00"
         },
         {
             "name": "spatie/pdf-to-text",

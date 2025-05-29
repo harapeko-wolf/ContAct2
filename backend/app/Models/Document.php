@@ -34,4 +34,9 @@ class Document extends Model
     {
         return $this->belongsTo(Company::class);
     }
+
+    public function views()
+    {
+        return $this->hasMany(DocumentView::class);
+    }
 }
