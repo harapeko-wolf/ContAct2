@@ -88,6 +88,26 @@ docker compose exec frontend npm install
 docker compose exec backend php artisan migrate
 ```
 
+## テストの実行
+
+### バックエンドのテスト
+```bash
+# すべてのテストを実行
+docker compose exec backend php artisan test
+
+# 特定のテストファイルを実行
+docker compose exec backend php artisan test --filter=AuthTest
+```
+
+### フロントエンドのテスト
+```bash
+# すべてのテストを実行
+docker compose exec frontend npm test
+
+# 特定のテストファイルを実行
+docker compose exec frontend npm test auth.test.tsx
+```
+
 ## 開発サーバーの起動
 
 ### バックエンド（Laravel）

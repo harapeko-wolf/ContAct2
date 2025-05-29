@@ -3,6 +3,7 @@ import { generateStaticParams } from './generateStaticParams';
 
 export { generateStaticParams };
 
-export default function ViewPage({ params }: { params: { uuid: string } }) {
-  return <ViewPageContent uuid={params.uuid} />;
+export default async function ViewPage({ params }: { params: Promise<{ uuid: string }> }) {
+  const { uuid } = await params;
+  return <ViewPageContent uuid={uuid} />;
 }
