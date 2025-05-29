@@ -54,11 +54,12 @@ export async function generateStaticParams() {
   ];
 }
 
-export default function CompanyPdfsPage({ params }: { params: { id: string } }) {
+export default async function CompanyPdfsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   return (
     <AdminLayout>
       <div className="flex-1 p-8">
-        <PDFListClient companyId={params.id} />
+        <PDFListClient companyId={id} />
         
         {/* アップロードカード */}
         {/* <Card className="border-dashed border-2 border-gray-200 bg-gray-50">

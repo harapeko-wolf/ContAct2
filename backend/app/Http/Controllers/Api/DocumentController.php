@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Document;
+use App\Models\DocumentView;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -178,5 +179,95 @@ class DocumentController extends Controller
         );
 
         return response()->json(['url' => $url]);
+    }
+
+    /**
+     * PDF閲覧ログを記録
+     */
+    public function logView(Request $request, $companyId, $documentId)
+    {
+        $validator = Validator::make($request->all(), [
+            'page_number' => 'required|integer|min:1',
+            'view_duration' => 'required|integer|min:0',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $document = Document::where('company_id', $companyId)
+            ->where('id', $documentId)
+            ->firstOrFail();
+
+        $view = DocumentView::create([
+            'id' => Str::uuid(),
+            'document_id' => $document->id,
+            'viewer_ip' => $request->ip(),
+            'viewer_user_agent' => $request->userAgent(),
+            'page_number' => $request->input('page_number'),
+            'view_duration' => $request->input('view_duration'),
+            'viewed_at' => now(),
+            'viewer_metadata' => [
+                'user_id' => $request->user() ? $request->user()->id : null,
+                'company_id' => $document->company_id,
+            ],
+        ]);
+
+        return response()->json($view, 201);
+    }
+
+    /**
+     * PDF閲覧ログを取得
+     */
+    public function getViewLogs(Request $request, Document $document)
+    {
+        $query = DocumentView::where('document_id', $document->id)
+            ->orderBy('viewed_at', 'desc');
+
+        // ページごとの集計
+        if ($request->has('group_by_page')) {
+            $logs = $query->selectRaw('
+                page_number,
+                COUNT(*) as view_count,
+                AVG(view_duration) as avg_duration,
+                MAX(viewed_at) as last_viewed
+            ')
+            ->groupBy('page_number')
+            ->get();
+
+            return response()->json($logs);
+        }
+
+        // 通常のログ一覧
+        $logs = $query->paginate(20);
+        return response()->json($logs);
+    }
+
+    /**
+     * 会社の全PDF閲覧ログを取得
+     */
+    public function getCompanyViewLogs(Request $request, $companyId)
+    {
+        $query = DocumentView::whereHas('document', function ($query) use ($companyId) {
+            $query->where('company_id', $companyId);
+        })->orderBy('viewed_at', 'desc');
+
+        // ページごとの集計
+        if ($request->has('group_by_page')) {
+            $logs = $query->selectRaw('
+                page_number,
+                COUNT(*) as view_count,
+                AVG(view_duration) as avg_duration,
+                MAX(viewed_at) as last_viewed
+            ')
+            ->groupBy('page_number')
+            ->get();
+
+            return response()->json($logs);
+        }
+
+        // 通常のログ一覧
+        $logs = $query->paginate(20);
+        return response()->json($logs);
     }
 }

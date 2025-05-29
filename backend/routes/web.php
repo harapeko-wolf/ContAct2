@@ -16,4 +16,7 @@ Route::prefix('api/admin')->middleware(['auth:sanctum'])->group(function () {
         Route::get('/{documentId}/download', [App\Http\Controllers\Admin\CompanyPdfController::class, 'download']);
         Route::get('/{documentId}/preview', [App\Http\Controllers\Admin\CompanyPdfController::class, 'preview']);
     });
+
+    // 会社のアクセスログを取得
+    Route::get('companies/{companyId}/view-logs', [App\Http\Controllers\Api\DocumentController::class, 'getCompanyViewLogs']);
 });

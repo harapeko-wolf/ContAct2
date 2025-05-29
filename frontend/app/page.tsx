@@ -53,7 +53,7 @@ export default function Home() {
                 無料トライアルを開始 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
-            <Link href="/view/sample">
+            <Link href="/view/ba7c162f-4d65-4c16-9921-3ee22e1a5ffa">
               <Button variant="outline" size="lg">
                 デモを見る
               </Button>
