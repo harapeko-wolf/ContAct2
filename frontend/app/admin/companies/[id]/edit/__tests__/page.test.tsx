@@ -38,7 +38,7 @@ describe('EditCompanyPage', () => {
     // モックのリセット
     jest.clearAllMocks()
     // APIのモック実装
-    ;(companyApi.getById as jest.Mock).mockResolvedValue(mockCompany)
+    ;(companyApi.get as jest.Mock).mockResolvedValue(mockCompany)
     ;(companyApi.update as jest.Mock).mockResolvedValue(mockCompany)
   })
 
@@ -73,7 +73,7 @@ describe('EditCompanyPage', () => {
   })
 
   it('会社情報が更新される', async () => {
-    (companyApi.getById as jest.Mock).mockResolvedValue({
+    (companyApi.get as jest.Mock).mockResolvedValue({
       ...mockCompany,
       status: 'inactive',
     })

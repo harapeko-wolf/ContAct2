@@ -21,11 +21,6 @@ use App\Http\Controllers\Api\DocumentController;
 Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login', [AuthController::class, 'login']);
 
-// 公開PDF閲覧用のルート
-Route::get('documents/{document}/preview', [DocumentController::class, 'preview']);
-Route::post('documents/{document}/view-logs', [DocumentController::class, 'logView']);
-Route::get('documents/{document}/view-logs', [DocumentController::class, 'getViewLogs']);
-
 // ヘルスチェック用のエンドポイント
 Route::get('/health', function () {
     return response()->json([
@@ -35,32 +30,42 @@ Route::get('/health', function () {
     ]);
 });
 
+// 認証不要の公開APIルート
+Route::prefix('public/companies/{companyId}')->group(function () {
+    Route::get('pdfs', [App\Http\Controllers\Admin\CompanyPdfController::class, 'publicIndex']);
+    Route::get('pdfs/{documentId}/preview', [App\Http\Controllers\Admin\CompanyPdfController::class, 'publicPreview']);
+});
+
+// PDF閲覧ログ記録（認証不要）
+Route::prefix('companies/{companyId}/pdfs/{documentId}')->group(function () {
+    Route::post('view-logs', [App\Http\Controllers\Api\DocumentController::class, 'logView']);
+    Route::get('view-logs', [App\Http\Controllers\Api\DocumentController::class, 'getViewLogs']);
+});
+
 // 認証が必要なルート
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/user', [AuthController::class, 'user']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
-
-    // 会社関連のルート
-    Route::apiResource('companies', CompanyController::class);
-
-    // PDF関連のルート
-    Route::apiResource('documents', DocumentController::class);
-    Route::get('documents/{document}/download', [DocumentController::class, 'download']);
-    Route::get('documents/{document}/preview', [DocumentController::class, 'preview']);
-
-    // 会社ごとのPDF関連のルート
-    Route::prefix('companies/{companyId}/pdfs')->group(function () {
-        Route::get('/', [DocumentController::class, 'index']);
-        Route::post('/', [DocumentController::class, 'store']);
-        Route::get('/{documentId}', [DocumentController::class, 'show']);
-        Route::put('/{documentId}', [DocumentController::class, 'update']);
-        Route::delete('/{documentId}', [DocumentController::class, 'destroy']);
-        Route::get('/{documentId}/download', [DocumentController::class, 'download']);
-        Route::get('/{documentId}/preview', [DocumentController::class, 'preview']);
-        Route::post('/{documentId}/view-logs', [DocumentController::class, 'logView']);
-        Route::get('/{documentId}/view-logs', [DocumentController::class, 'getViewLogs']);
+    Route::get('/user', function (Request $request) {
+        return $request->user();
     });
 
-    // 会社ごとの閲覧ログを取得するルート
-    Route::get('/companies/{companyId}/view-logs', [DocumentController::class, 'getCompanyViewLogs']);
+    // 会社管理
+    Route::apiResource('companies', App\Http\Controllers\Api\CompanyController::class);
+
+    // PDF管理（管理画面用）
+    Route::prefix('admin/companies/{companyId}/pdfs')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\CompanyPdfController::class, 'index']);
+        Route::post('/', [App\Http\Controllers\Admin\CompanyPdfController::class, 'store']);
+        Route::put('/sort-order', [App\Http\Controllers\Admin\CompanyPdfController::class, 'updateSortOrder']);
+        Route::get('/{documentId}', [App\Http\Controllers\Admin\CompanyPdfController::class, 'show']);
+        Route::put('/{documentId}', [App\Http\Controllers\Admin\CompanyPdfController::class, 'update']);
+        Route::put('/{documentId}/status', [App\Http\Controllers\Admin\CompanyPdfController::class, 'updateStatus']);
+        Route::delete('/{documentId}', [App\Http\Controllers\Admin\CompanyPdfController::class, 'destroy']);
+        Route::get('/{documentId}/download', [App\Http\Controllers\Admin\CompanyPdfController::class, 'download']);
+        Route::get('/{documentId}/preview', [App\Http\Controllers\Admin\CompanyPdfController::class, 'preview']);
+    });
+
+    // 会社のアクセスログを取得
+    Route::get('admin/companies/{companyId}/view-logs', [App\Http\Controllers\Api\DocumentController::class, 'getCompanyViewLogs']);
 });
