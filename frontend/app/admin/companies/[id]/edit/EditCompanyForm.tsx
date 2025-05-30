@@ -54,7 +54,7 @@ export default function EditCompanyForm({ companyId }: { companyId: string }) {
   useEffect(() => {
     const fetchCompany = async () => {
       try {
-        const company = await companyApi.getById(companyId);
+        const company = await companyApi.get(companyId);
         console.log('取得した会社データ:', company);
         const resetValues = {
           name: company.name ?? '',

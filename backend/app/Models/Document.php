@@ -22,11 +22,13 @@ class Document extends Model
         'file_size',
         'mime_type',
         'status',
+        'sort_order',
         'metadata',
     ];
 
     protected $casts = [
         'file_size' => 'integer',
+        'sort_order' => 'integer',
         'metadata' => 'array',
     ];
 

@@ -125,7 +125,7 @@ export default function PDFListClient({ companyId }: PDFListClientProps) {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const company = await companyApi.getById(companyId);
+        const company = await companyApi.get(companyId);
         setCompanyName(company.name);
         const response = await pdfApi.getAll(companyId);
         setPdfs(response.data);
@@ -161,7 +161,11 @@ export default function PDFListClient({ companyId }: PDFListClientProps) {
 
     setIsUploading(true);
     try {
-      const newPdf = await pdfApi.upload(companyId, uploadFile, uploadTitle);
+      const formData = new FormData();
+      formData.append('file', uploadFile);
+      formData.append('title', uploadTitle);
+      
+      const newPdf = await pdfApi.upload(companyId, formData);
       setPdfs([
         {
           ...newPdf,

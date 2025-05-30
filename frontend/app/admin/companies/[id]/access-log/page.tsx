@@ -28,6 +28,9 @@ interface ViewLog {
   viewer_ip: string;
   viewer_user_agent: string;
   viewed_at: string;
+  viewer_metadata?: any;
+  created_at: string;
+  updated_at: string;
   document_title?: string;
 }
 
@@ -59,7 +62,7 @@ export default function AccessLogPage({ params }: { params: Promise<{ id: string
         setCompanyId(id);
 
         // 会社情報を取得
-        const company = await companyApi.getById(id);
+        const company = await companyApi.get(id);
         setCompanyName(company.name);
 
         // PDF一覧を取得
@@ -68,8 +71,12 @@ export default function AccessLogPage({ params }: { params: Promise<{ id: string
 
         // 会社全体のアクセスログを取得
         console.log('Fetching company view logs for company:', id);
-        const allViewLogs = await pdfApi.getCompanyViewLogs(id);
-        console.log('Received view logs:', allViewLogs);
+        const allViewLogsResponse = await pdfApi.getCompanyViewLogs(id);
+        console.log('Received view logs response:', allViewLogsResponse);
+        
+        // ページネーション形式のレスポンスからdataを取得
+        const allViewLogs = allViewLogsResponse.data || allViewLogsResponse;
+        console.log('View logs data:', allViewLogs);
         console.log('View logs type:', typeof allViewLogs);
         console.log('View logs length:', Array.isArray(allViewLogs) ? allViewLogs.length : 'Not an array');
 
@@ -351,7 +358,7 @@ export default function AccessLogPage({ params }: { params: Promise<{ id: string
                   className={sortOrder === 'desc' ? 'bg-gray-100' : ''}
                 >
                   <SortDesc className="h-4 w-4" />
-                </Button>
+              </Button>
               </div>
             </div>
             

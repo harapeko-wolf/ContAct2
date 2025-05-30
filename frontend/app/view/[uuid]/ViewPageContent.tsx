@@ -111,7 +111,6 @@ const PDFThumbnail = ({ pdfUrl, title }: { pdfUrl: string; title: string }) => {
         <Page
           pageNumber={1}
           width={pageSize.width}
-          height={pageSize.height}
           renderAnnotationLayer={false}
           renderTextLayer={false}
           onLoadSuccess={onPageLoadSuccess}
@@ -143,17 +142,18 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const company = await companyApi.getById(uuid);
-        setCompanyName(company.name);
-        const pdfs = await pdfApi.getAll(uuid);
-        setDocuments(pdfs.data);
-        // プレビューURLも取得
+        // 公開APIを使用
+        const data = await pdfApi.getPublicAll(uuid);
+        setCompanyName(data.company.name);
+        setDocuments(data.data);
+        // 公開プレビューURLを使用
         const urls: { [id: string]: string } = {};
-        for (const doc of pdfs.data) {
-          urls[doc.id] = await pdfApi.getPreviewUrl(uuid, doc.id);
+        for (const doc of data.data) {
+          urls[doc.id] = pdfApi.getPublicPreviewUrl(uuid, doc.id);
         }
         setPreviewUrls(urls);
-      } catch {
+      } catch (error) {
+        console.error('データの読み込みに失敗しました:', error);
         setCompanyName('会社名取得エラー');
         setDocuments([]);
         setPreviewUrls({});

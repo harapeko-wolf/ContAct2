@@ -99,10 +99,20 @@ export default function CompaniesPage() {
   const loadCompanies = async () => {
     try {
       const data = await companyApi.getAll(currentPage, perPage);
-      setCompanies(data.data);
-      setTotalPages(data.last_page);
-      setTotalItems(data.total);
+      // ページネーション形式のレスポンス処理
+      if (data.data) {
+        setCompanies(data.data);
+        setTotalPages(data.last_page || 1);
+        setTotalItems(data.total || data.data.length);
+      } else {
+        // 配列形式の場合（フォールバック）
+        setCompanies(Array.isArray(data) ? data : []);
+        setTotalPages(1);
+        setTotalItems(Array.isArray(data) ? data.length : 0);
+      }
     } catch (error) {
+      console.error('Company loading error:', error);
+      setCompanies([]); // エラー時は空配列を設定
       toast({
         title: 'エラー',
         description: '会社一覧の取得に失敗しました',
@@ -125,13 +135,13 @@ export default function CompaniesPage() {
 
     try {
       await companyApi.delete(deleteDialog.companyId);
-      setCompanies(companies.filter(company => company.id !== deleteDialog.companyId));
+      setCompanies((companies || []).filter(company => company.id !== deleteDialog.companyId));
       toast({
         title: '成功',
         description: '会社を削除しました',
       });
       // 現在のページの最後のアイテムを削除した場合、前のページに移動
-      if (companies.length === 1 && currentPage > 1) {
+      if ((companies || []).length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1);
       } else {
         loadCompanies();
@@ -152,7 +162,7 @@ export default function CompaniesPage() {
 
   const handleStatusChange = async (companyId: string, newStatus: 'active' | 'considering' | 'inactive') => {
     try {
-      const company = companies.find(c => c.id === companyId);
+      const company = (companies || []).find(c => c.id === companyId);
       if (!company) return;
 
       await companyApi.update(companyId, {
@@ -184,7 +194,7 @@ export default function CompaniesPage() {
     }
   };
 
-  const filteredCompanies = companies.filter(company => {
+  const filteredCompanies = (companies || []).filter(company => {
     const matchesSearch = 
       (company.name?.toLowerCase() ?? '').includes(searchTerm.toLowerCase()) ||
       (company.email?.toLowerCase() ?? '').includes(searchTerm.toLowerCase());
