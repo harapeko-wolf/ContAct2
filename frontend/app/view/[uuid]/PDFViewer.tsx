@@ -50,7 +50,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ documentId, companyId, isActive }
   useEffect(() => {
     const fetchPdfUrl = async () => {
       try {
-        const url = await pdfApi.getPreviewUrl(companyId, documentId);
+        const url = pdfApi.getPublicPreviewUrl(companyId, documentId);
         setPdfUrl(url);
       } catch (error) {
         console.error('Failed to fetch PDF URL:', error);
@@ -71,7 +71,10 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ documentId, companyId, isActive }
     }
     try {
       console.log('Logging page view:', { documentId, companyId, pageNumber, duration });
-      await pdfApi.logView(companyId, documentId, pageNumber, duration);
+      await pdfApi.logView(companyId, documentId, {
+        page_number: pageNumber,
+        view_duration: duration,
+      });
     } catch (error) {
       console.error('Failed to log page view:', error);
     }
