@@ -33,6 +33,7 @@ const companySchema = z.object({
   industry: z.string().optional(),
   employee_count: z.number().int().positive().optional(),
   status: z.enum(['active', 'considering', 'inactive']).default('active'),
+  booking_link: z.string().url({ message: '有効なURLを入力してください' }).optional().or(z.literal('')),
 });
 
 type CompanyFormValues = z.infer<typeof companySchema>;
@@ -54,6 +55,7 @@ export default function CreateCompanyPage() {
       industry: '',
       employee_count: undefined,
       status: 'active',
+      booking_link: '',
     },
   });
 
@@ -61,7 +63,11 @@ export default function CreateCompanyPage() {
     setIsSaving(true);
     
     try {
-      await companyApi.create(data);
+      const submitData = {
+        ...data,
+        employee_count: data.employee_count ?? null,
+      };
+      await companyApi.create(submitData);
       
       toast({
         title: '成功',
@@ -170,6 +176,23 @@ export default function CreateCompanyPage() {
                         <FormControl>
                           <Input placeholder="https://example.com" {...field} disabled={isSaving} />
                         </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="booking_link"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>TimeRex誘導リンク（任意）</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://timerex.net/s/yourlink" {...field} disabled={isSaving} />
+                        </FormControl>
+                        <FormDescription>
+                          ミーティング予約の「候補の日時を見る」ボタンでリダイレクトするURLを設定します
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
