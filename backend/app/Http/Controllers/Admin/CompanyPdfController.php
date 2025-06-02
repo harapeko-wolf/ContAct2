@@ -43,7 +43,7 @@ class CompanyPdfController extends Controller
         try {
             $request->validate([
                 'title' => 'required|string|max:255',
-                'file' => 'required|file|mimes:pdf|max:10240', // 10MBまで
+                'file' => 'required|file|mimes:pdf|max:51200', // 50MBまで
             ]);
 
             $file = $request->file('file');

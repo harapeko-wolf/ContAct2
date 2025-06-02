@@ -159,6 +159,16 @@ export default function PDFListClient({ companyId }: PDFListClientProps) {
   const handleUpload = async () => {
     if (!uploadFile || !uploadTitle) return;
 
+    // ファイルサイズチェック (50MB)
+    if (uploadFile.size > 50 * 1024 * 1024) {
+      toast({
+        title: 'エラーが発生しました',
+        description: 'ファイルサイズは50MB以下にしてください',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsUploading(true);
     try {
       const formData = new FormData();
