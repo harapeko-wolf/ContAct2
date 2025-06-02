@@ -7,16 +7,19 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import { cn } from '@/lib/utils';
 import { pdfApi } from '@/lib/api';
 
-// PDFワーカーの設定
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+// PDFワーカーの設定（react-pdf v7用）
+if (typeof window !== 'undefined') {
+  pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+}
 
 export interface PDFViewerProps {
   documentId: string;
   companyId: string;
   isActive: boolean;
+  onLastPageReached?: (documentId: string) => void;
 }
 
-const PDFViewer: React.FC<PDFViewerProps> = ({ documentId, companyId, isActive }) => {
+const PDFViewer: React.FC<PDFViewerProps> = ({ documentId, companyId, isActive, onLastPageReached }) => {
   const [numPages, setNumPages] = useState<number>(0);
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
@@ -26,6 +29,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ documentId, companyId, isActive }
   const containerRef = useRef<HTMLDivElement>(null);
   const [pageStartTime, setPageStartTime] = useState<number | null>(null);
   const [isPdfLoaded, setIsPdfLoaded] = useState(false);
+  const [hasReachedLastPage, setHasReachedLastPage] = useState(false);
   
   // 最新の値を保持するためのref
   const currentPageRef = useRef(pageNumber);
@@ -104,6 +108,13 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ documentId, companyId, isActive }
     setPageStartTime(Date.now());
     // ログフラグをリセット
     hasLoggedRef.current = false;
+    
+    // 最後のページに到達した場合の処理
+    if (newPageNumber === numPages && !hasReachedLastPage && onLastPageReached) {
+      setHasReachedLastPage(true);
+      onLastPageReached(documentId);
+      console.log(`Reached last page (${newPageNumber}/${numPages}), showing booking prompt`);
+    }
     
     console.log(`Page changed from ${pageNumber} to ${newPageNumber}, timer reset`);
   };
