@@ -25,6 +25,7 @@ class Company extends Model
         'industry',
         'employee_count',
         'status',
+        'booking_link',
     ];
 
     protected $casts = [
