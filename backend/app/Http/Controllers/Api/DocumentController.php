@@ -48,7 +48,7 @@ class DocumentController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
-            'file' => 'required|file|mimes:pdf|max:10240', // 最大10MB
+            'file' => 'required|file|mimes:pdf|max:51200', // 最大50MB
         ]);
 
         if ($validator->fails()) {

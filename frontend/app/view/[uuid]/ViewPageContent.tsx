@@ -20,8 +20,10 @@ import { useToast } from '@/hooks/use-toast';
 import { pdfApi, companyApi, PDF } from '@/lib/api';
 import { Document, Page, pdfjs } from 'react-pdf';
 
-// PDFワーカーの設定
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+// PDFワーカーの設定（react-pdf v7用）
+if (typeof window !== 'undefined') {
+  pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+}
 
 // PDFビューワーを動的にインポート（クライアントサイドのみ）
 const PDFViewer = dynamic(() => import('./PDFViewer'), {
@@ -63,16 +65,18 @@ const surveyOptions = [
 // PDFサムネイルコンポーネント
 const PDFThumbnail = ({ pdfUrl, title }: { pdfUrl: string; title: string }) => {
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [pageSize, setPageSize] = useState({ width: 320, height: 180 });
 
   const onDocumentLoadSuccess = () => {
     setLoading(false);
+    setError(null);
   };
 
-  const onDocumentLoadError = () => {
+  const onDocumentLoadError = (error: any) => {
     setLoading(false);
-    setError(true);
+    console.error('PDF loading error:', error);
+    setError(`PDFの読み込みに失敗しました: ${error.message || 'Unknown error'}`);
   };
 
   const onPageLoadSuccess = (page: any) => {
@@ -88,8 +92,9 @@ const PDFThumbnail = ({ pdfUrl, title }: { pdfUrl: string; title: string }) => {
 
   if (error) {
     return (
-      <div className="aspect-[16/9] bg-gray-100 rounded-lg flex items-center justify-center">
-        <FileText className="h-12 w-12 text-gray-400" />
+      <div className="aspect-[16/9] bg-gray-100 rounded-lg flex flex-col items-center justify-center p-4">
+        <FileText className="h-8 w-8 text-gray-400 mb-2" />
+        <div className="text-xs text-center text-red-600">{error}</div>
       </div>
     );
   }
@@ -124,6 +129,7 @@ const PDFThumbnail = ({ pdfUrl, title }: { pdfUrl: string; title: string }) => {
 
 export default function ViewPageContent({ uuid }: { uuid: string }) {
   const [companyName, setCompanyName] = useState('');
+  const [companyData, setCompanyData] = useState<any>(null);
   const [documents, setDocuments] = useState<PDF[]>([]);
   const [interestLevel, setInterestLevel] = useState<string | null>(null);
   const [hasCompletedSurvey, setHasCompletedSurvey] = useState(false);
@@ -145,6 +151,7 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
         // 公開APIを使用
         const data = await pdfApi.getPublicAll(uuid);
         setCompanyName(data.company.name);
+        setCompanyData(data.company);
         setDocuments(data.data);
         // 公開プレビューURLを使用
         const urls: { [id: string]: string } = {};
@@ -155,6 +162,7 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
       } catch (error) {
         console.error('データの読み込みに失敗しました:', error);
         setCompanyName('会社名取得エラー');
+        setCompanyData(null);
         setDocuments([]);
         setPreviewUrls({});
       } finally {
@@ -187,10 +195,9 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
   };
 
   // 最終ページ到達時の処理
-  const handleLastPage = (docId: string, isLastPage: boolean) => {
-    if (isLastPage) {
-      setShowBookingPrompt(true);
-    }
+  const handleLastPageReached = (docId: string) => {
+    console.log(`Document ${docId} last page reached, showing booking prompt`);
+    setShowBookingPrompt(true);
   };
 
   const handleDocumentClick = (document: PDF) => {
@@ -320,7 +327,10 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
               </DialogHeader>
               <div className="py-4">
                 <div className="flex gap-3">
-                  <Button onClick={() => window.location.href = '/booking'} className="flex-1 gap-2">
+                  <Button onClick={() => {
+                    const bookingUrl = companyData?.booking_link || '/booking';
+                    window.location.href = bookingUrl;
+                  }} className="flex-1 gap-2">
                     <Calendar className="h-4 w-4" />
                     候補の日時を見る
                   </Button>
@@ -334,7 +344,7 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
         )}
 
         <Dialog open={showViewer} onOpenChange={handleViewerClose}>
-          <DialogContent className="max-w-5xl w-[95vw] h-[auto] max-h-[90vh] sm:w-[85vw] sm:h-[auto] sm:max-h-[85vh] p-0 flex flex-col">
+          <DialogContent className="max-w-7xl w-[95vw] h-[auto] max-h-[90vh] sm:w-[85vw] sm:h-[auto] sm:max-h-[85vh] p-0 flex flex-col">
             <DialogHeader className="flex flex-row items-center justify-between p-3 border-b shrink-0">
               <div className="min-w-0 flex-1">
                 <DialogTitle className="text-base sm:text-lg font-semibold truncate">
@@ -359,6 +369,7 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
                   documentId={selectedDocument.id}
                   companyId={uuid}
                   isActive={showViewer}
+                  onLastPageReached={handleLastPageReached}
                 />
               )}
             </div>
