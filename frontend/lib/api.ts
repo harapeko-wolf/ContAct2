@@ -42,6 +42,7 @@ export interface Company {
   industry?: string;
   employee_count?: number;
   status: 'active' | 'considering' | 'inactive';
+  booking_link?: string;
   created_at: string;
   updated_at: string;
 }
@@ -120,6 +121,10 @@ export const pdfApi = {
   // PDFを更新
   update: (companyId: string, pdfId: string, data: Partial<PDF>) => 
     api.put<PDF>(`/admin/companies/${companyId}/pdfs/${pdfId}`, data).then((res) => res.data),
+
+  // PDFタイトルを更新
+  updateTitle: (companyId: string, pdfId: string, title: string) => 
+    api.put<PDF>(`/admin/companies/${companyId}/pdfs/${pdfId}`, { title }).then((res) => res.data),
 
   // PDFを削除
   delete: (companyId: string, pdfId: string) => 

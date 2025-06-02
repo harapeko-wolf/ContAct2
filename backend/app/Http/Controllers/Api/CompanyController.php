@@ -68,7 +68,8 @@ class CompanyController extends Controller
                 'website' => 'nullable|url|max:255',
                 'description' => 'nullable|string|max:1000',
                 'industry' => 'nullable|string|max:100',
-                'employee_count' => 'nullable|integer|min:1',
+                'employee_count' => 'nullable|integer',
+                'booking_link' => 'nullable|url|max:255',
             ]);
 
             $company = Company::create($validated);
@@ -107,8 +108,9 @@ class CompanyController extends Controller
                 'website' => 'nullable|url|max:255',
                 'description' => 'nullable|string|max:1000',
                 'industry' => 'nullable|string|max:100',
-                'employee_count' => 'nullable|integer|min:1',
-                'status' => 'sometimes|in:active,inactive',
+                'employee_count' => 'nullable|integer',
+                'status' => 'sometimes|in:active,considering,inactive',
+                'booking_link' => 'nullable|url|max:255',
             ]);
 
             $company->update($validated);
