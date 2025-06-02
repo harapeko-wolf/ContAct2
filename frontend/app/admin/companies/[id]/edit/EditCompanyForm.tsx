@@ -26,6 +26,7 @@ const companySchema = z.object({
   industry: z.string().optional(),
   employee_count: z.number().optional(),
   status: z.enum(['active', 'considering', 'inactive']),
+  booking_link: z.string().url({ message: '有効なURLを入力してください' }).optional().or(z.literal('')),
 });
 
 type CompanyFormValues = z.infer<typeof companySchema>;
@@ -48,6 +49,7 @@ export default function EditCompanyForm({ companyId }: { companyId: string }) {
       industry: '',
       employee_count: undefined,
       status: 'active',
+      booking_link: '',
     },
   });
 
@@ -66,6 +68,7 @@ export default function EditCompanyForm({ companyId }: { companyId: string }) {
           industry: company.industry ?? '',
           employee_count: company.employee_count ?? undefined,
           status: company.status ?? 'active',
+          booking_link: company.booking_link ?? '',
         };
         console.log('form.resetに渡す値:', resetValues);
         form.reset(resetValues);
@@ -87,7 +90,11 @@ export default function EditCompanyForm({ companyId }: { companyId: string }) {
   async function onSubmit(data: CompanyFormValues) {
     setIsSaving(true);
     try {
-      await companyApi.update(companyId, data);
+      const submitData = {
+        ...data,
+        employee_count: data.employee_count ?? null,
+      };
+      await companyApi.update(companyId, submitData);
       toast({
         title: '更新しました',
         description: '会社情報を更新しました',
@@ -185,6 +192,19 @@ export default function EditCompanyForm({ companyId }: { companyId: string }) {
                     <FormLabel>Webサイト</FormLabel>
                     <FormControl>
                       <Input {...field} disabled={isSaving} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="booking_link"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>TimeRex誘導リンク（任意）</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://timerex.net/s/yourlink" {...field} disabled={isSaving} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
