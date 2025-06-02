@@ -38,6 +38,7 @@ class CompanyController extends Controller
             'industry' => 'nullable|string|max:100',
             'employee_count' => 'nullable|integer',
             'status' => 'required|in:active,considering,inactive',
+            'booking_link' => 'nullable|url|max:255',
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -84,6 +85,7 @@ class CompanyController extends Controller
             'industry' => 'nullable|string|max:100',
             'employee_count' => 'nullable|integer',
             'status' => 'required|in:active,considering,inactive',
+            'booking_link' => 'nullable|url|max:255',
         ]);
         if ($validator->fails()) {
             return response()->json([

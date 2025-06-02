@@ -45,6 +45,7 @@ interface PDFCardProps {
   onPreview: (pdf: PDF) => void;
   onDownload: (pdf: PDF) => void;
   onStatusChange: (pdf: PDF, status: 'active' | 'inactive') => void;
+  onTitleUpdate: (pdf: PDF, newTitle: string) => void;
   isDragging?: boolean;
 }
 
@@ -58,10 +59,38 @@ function SortablePDFCard(props: PDFCardProps) {
     isDragging,
   } = useSortable({ id: props.pdf.id });
 
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitle, setEditTitle] = useState(props.pdf.title);
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+  };
+
+  const handleTitleClick = () => {
+    setIsEditingTitle(true);
+    setEditTitle(props.pdf.title);
+  };
+
+  const handleTitleSave = () => {
+    if (editTitle.trim() && editTitle !== props.pdf.title) {
+      props.onTitleUpdate(props.pdf, editTitle.trim());
+    }
+    setIsEditingTitle(false);
+  };
+
+  const handleTitleCancel = () => {
+    setEditTitle(props.pdf.title);
+    setIsEditingTitle(false);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleTitleSave();
+    } else if (e.key === 'Escape') {
+      handleTitleCancel();
+    }
   };
 
   return (
@@ -77,9 +106,43 @@ function SortablePDFCard(props: PDFCardProps) {
               >
                 <GripVertical className="h-4 w-4 text-gray-400" />
               </div>
-              <CardTitle className="text-lg font-semibold truncate flex-1 mr-2">
-                {props.pdf.title}
-              </CardTitle>
+              {isEditingTitle ? (
+                <div className="flex items-center gap-2 flex-1">
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    onKeyDown={handleKeyPress}
+                    onBlur={handleTitleSave}
+                    className="flex-1 px-2 py-1 text-lg font-semibold border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    autoFocus
+                  />
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleTitleSave}
+                    className="px-2 text-green-600 hover:text-green-700"
+                  >
+                    ✓
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleTitleCancel}
+                    className="px-2 text-red-600 hover:text-red-700"
+                  >
+                    ✕
+                  </Button>
+                </div>
+              ) : (
+                <CardTitle 
+                  className="text-lg font-semibold truncate flex-1 mr-2 cursor-pointer hover:text-blue-600 transition-colors"
+                  onClick={handleTitleClick}
+                  title="クリックして編集"
+                >
+                  {props.pdf.title}
+                </CardTitle>
+              )}
             </div>
             <Badge 
               variant={props.pdf.status === 'active' ? 'default' : 'secondary'}
@@ -101,7 +164,7 @@ function SortablePDFCard(props: PDFCardProps) {
           </div>
           
           <div className="space-y-2 text-sm text-gray-600">
-            <div>ファイル名: {props.pdf.file_name}</div>
+            <div className="truncate">ファイル名: {props.pdf.file_name}</div>
             <div>サイズ: {(props.pdf.file_size / 1024 / 1024).toFixed(2)} MB</div>
             <div>作成日: {new Date(props.pdf.created_at).toLocaleDateString('ja-JP')}</div>
           </div>
@@ -232,6 +295,12 @@ export default function CompanyPDFsPage() {
       return;
     }
 
+    // ファイルサイズチェック (50MB)
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error('ファイルサイズは50MB以下にしてください');
+      return;
+    }
+
     try {
       setUploading(true);
       const formData = new FormData();
@@ -358,6 +427,17 @@ export default function CompanyPDFsPage() {
     }
   };
 
+  const handleTitleUpdate = async (pdf: PDF, newTitle: string) => {
+    try {
+      await pdfApi.updateTitle(companyId, pdf.id, newTitle);
+      toast.success('PDFのタイトルを更新しました');
+      loadData();
+    } catch (error) {
+      console.error('タイトルの更新に失敗しました:', error);
+      toast.error('タイトルの更新に失敗しました');
+    }
+  };
+
   if (loading) {
     return (
       <AdminLayout>
@@ -441,6 +521,7 @@ export default function CompanyPDFsPage() {
                     onPreview={handlePreview}
                     onDownload={handleDownload}
                     onStatusChange={handleStatusChange}
+                    onTitleUpdate={handleTitleUpdate}
                   />
                 ))}
               </div>
@@ -450,7 +531,7 @@ export default function CompanyPDFsPage() {
 
         {/* PDFプレビューモーダル */}
         <Dialog open={previewModal.isOpen} onOpenChange={closePreviewModal}>
-          <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+          <DialogContent className="max-w-7xl max-h-[90vh] p-0">
             <DialogHeader className="p-6 pb-4">
               <div className="flex items-center justify-between">
                 <div>

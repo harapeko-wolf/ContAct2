@@ -77,11 +77,11 @@ export default function PDFTemplatesPage() {
     const file = event.target.files?.[0];
     if (!file || !selectedTemplate || !selectedPdf) return;
 
-    // ファイルサイズチェック (20MB)
-    if (file.size > 20 * 1024 * 1024) {
+    // ファイルサイズチェック (50MB)
+    if (file.size > 50 * 1024 * 1024) {
       toast({
         title: 'エラー',
-        description: 'ファイルサイズは20MB以下にしてください',
+        description: 'ファイルサイズは50MB以下にしてください',
         variant: 'destructive',
       });
       return;
@@ -447,7 +447,7 @@ export default function PDFTemplatesPage() {
                   />
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  最大20MBまでのPDFファイルをアップロードできます
+                  最大50MBまでのPDFファイルをアップロードできます
                 </p>
               </div>
             </DialogContent>

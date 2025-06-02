@@ -22,6 +22,9 @@ WORKDIR /var/www/html
 # アプリケーションのコピー
 COPY backend/ .
 
+# PHP設定のコピー
+COPY docker/backend/php.ini /usr/local/etc/php/conf.d/custom.ini
+
 # Nginx設定のコピー
 COPY docker/backend/nginx.conf /etc/nginx/sites-available/default
 
