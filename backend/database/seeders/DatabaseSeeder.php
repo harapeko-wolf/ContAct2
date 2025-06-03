@@ -24,6 +24,8 @@ class DatabaseSeeder extends Seeder
         $this->call([
             CompanySeeder::class,
             DocumentSeeder::class,
+            DocumentViewSeeder::class,
+            DocumentFeedbackSeeder::class,
         ]);
     }
 }
