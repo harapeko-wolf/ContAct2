@@ -69,8 +69,17 @@ class CompanyController extends Controller
                 'description' => 'nullable|string|max:1000',
                 'industry' => 'nullable|string|max:100',
                 'employee_count' => 'nullable|integer',
+                'status' => 'nullable|in:active,considering,inactive',
                 'booking_link' => 'nullable|url|max:255',
             ]);
+
+            // 認証済みユーザーのIDを追加
+            $validated['user_id'] = $request->user()->id;
+
+            // statusのデフォルト値を設定
+            if (!isset($validated['status'])) {
+                $validated['status'] = 'active';
+            }
 
             $company = Company::create($validated);
 

@@ -182,4 +182,38 @@ export const pdfApi = {
   },
 };
 
+// ダッシュボード統計データの型定義
+export interface DashboardStats {
+  total_companies: number;
+  company_growth_rate: number;
+  total_views: number;
+  view_growth_rate: number;
+}
+
+export interface DashboardFeedback {
+  company_name: string;
+  feedback_type: string;
+  created_at: string;
+  company_id?: string;
+}
+
+export interface DashboardActivity {
+  company_name: string;
+  document_title: string;
+  viewed_at: string;
+  company_id?: string;
+}
+
+export interface DashboardData {
+  stats: DashboardStats;
+  recent_feedback: DashboardFeedback[];
+  recent_activity: DashboardActivity[];
+}
+
+// ダッシュボードAPI
+export const dashboardApi = {
+  getStats: () => 
+    api.get<{ data: DashboardData; meta: { timestamp: string } }>('/admin/dashboard/stats').then((res) => res.data),
+};
+
 export default api; 

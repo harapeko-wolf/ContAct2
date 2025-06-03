@@ -12,7 +12,6 @@ class CompanyFactory extends Factory
     public function definition(): array
     {
         return [
-            'id' => (string) \Illuminate\Support\Str::uuid(),
             'user_id' => \App\Models\User::factory(),
             'name' => $this->faker->company(),
             'email' => $this->faker->unique()->companyEmail(),
