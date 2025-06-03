@@ -420,7 +420,13 @@ export default function CompanyPDFsPage() {
     try {
       await pdfApi.updateStatus(companyId, pdf.id, status);
       toast.success('PDFのステータスを変更しました');
-      loadData();
+      
+      // ローカル状態のみ更新（全体再取得は不要）
+      setPdfs(prevPdfs => 
+        prevPdfs.map(p => 
+          p.id === pdf.id ? { ...p, status } : p
+        )
+      );
     } catch (error) {
       console.error('ステータスの変更に失敗しました:', error);
       toast.error('ステータスの変更に失敗しました');
