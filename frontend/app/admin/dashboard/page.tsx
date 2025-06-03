@@ -11,23 +11,102 @@ import {
   Users,
   ChevronUp,
   ChevronDown,
-  ArrowUpRight
+  ArrowUpRight,
+  Loader2
 } from 'lucide-react';
 
 import AdminLayout from '@/components/admin/layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { dashboardApi, DashboardData } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 
 export default function DashboardPage() {
   const [mounted, setMounted] = useState(false);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
   
   useEffect(() => {
     setMounted(true);
+    fetchDashboardData();
   }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setIsLoading(true);
+      const response = await dashboardApi.getStats();
+      setDashboardData(response.data);
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error);
+      toast({
+        title: 'エラーが発生しました',
+        description: 'ダッシュボードデータの取得に失敗しました',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 時間差表示用のヘルパー関数
+  const getTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMs = now.getTime() - date.getTime();
+    const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    const diffInDays = Math.floor(diffInHours / 24);
+
+    if (diffInMinutes < 60) {
+      return `${diffInMinutes}分前`;
+    } else if (diffInHours < 24) {
+      return `${diffInHours}時間前`;
+    } else {
+      return `${diffInDays}日前`;
+    }
+  };
+
+  // フィードバックタイプの日本語変換
+  const getFeedbackTypeText = (type: string) => {
+    const typeMap: { [key: string]: string } = {
+      'very_interested': '非常に興味あり',
+      'interested': 'やや興味あり',
+      'not_interested': '興味なし',
+      'like': '良い',
+      'dislike': '良くない',
+    };
+    return typeMap[type] || type;
+  };
+
+  // フィードバックタイプの色
+  const getFeedbackColor = (type: string) => {
+    const colorMap: { [key: string]: string } = {
+      'very_interested': 'bg-green-500',
+      'interested': 'bg-yellow-500',
+      'not_interested': 'bg-red-500',
+      'like': 'bg-green-500',
+      'dislike': 'bg-red-500',
+    };
+    return colorMap[type] || 'bg-gray-500';
+  };
 
   if (!mounted) {
     return null;
+  }
+
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex-1 space-y-4 p-8">
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            <span className="ml-2">データを読み込み中...</span>
+          </div>
+        </div>
+      </AdminLayout>
+    );
   }
 
   return (
@@ -57,11 +136,17 @@ export default function DashboardPage() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">12</div>
+              <div className="text-2xl font-bold">{dashboardData?.stats.total_companies || 0}</div>
               <p className="text-xs text-muted-foreground mt-1 flex items-center">
-                <span className="text-green-500 flex items-center mr-1">
-                  <ChevronUp className="h-3 w-3" />
-                  25%
+                <span className={`flex items-center mr-1 ${
+                  (dashboardData?.stats.company_growth_rate || 0) >= 0 ? 'text-green-500' : 'text-red-500'
+                }`}>
+                  {(dashboardData?.stats.company_growth_rate || 0) >= 0 ? (
+                    <ChevronUp className="h-3 w-3" />
+                  ) : (
+                    <ChevronDown className="h-3 w-3" />
+                  )}
+                  {Math.abs(dashboardData?.stats.company_growth_rate || 0)}%
                 </span>
                 先月比
               </p>
@@ -76,19 +161,23 @@ export default function DashboardPage() {
               <Eye className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">1,429</div>
+              <div className="text-2xl font-bold">{dashboardData?.stats.total_views || 0}</div>
               <p className="text-xs text-muted-foreground mt-1 flex items-center">
-                <span className="text-green-500 flex items-center mr-1">
-                  <ChevronUp className="h-3 w-3" />
-                  18%
+                <span className={`flex items-center mr-1 ${
+                  (dashboardData?.stats.view_growth_rate || 0) >= 0 ? 'text-green-500' : 'text-red-500'
+                }`}>
+                  {(dashboardData?.stats.view_growth_rate || 0) >= 0 ? (
+                    <ChevronUp className="h-3 w-3" />
+                  ) : (
+                    <ChevronDown className="h-3 w-3" />
+                  )}
+                  {Math.abs(dashboardData?.stats.view_growth_rate || 0)}%
                 </span>
                 先月比
               </p>
             </CardContent>
           </Card>
         </div>
-        
-
         
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
           <Card>
@@ -100,38 +189,24 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                    <p className="text-sm font-medium">ワンダフル株式会社</p>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1 pl-5">非常に興味あり - 2時間前</p>
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                    <p className="text-sm font-medium">グロベックス</p>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1 pl-5">やや興味あり - 5時間前</p>
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                    <p className="text-sm font-medium">スターク・インダストリーズ</p>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1 pl-5">非常に興味あり - 1日前</p>
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                    <p className="text-sm font-medium">サイバーダイン・システムズ</p>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1 pl-5">興味なし - 2日前</p>
-                </div>
+                {dashboardData?.recent_feedback.length ? (
+                  dashboardData.recent_feedback.map((feedback, index) => (
+                    <div key={index}>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-3 h-3 rounded-full ${getFeedbackColor(feedback.feedback_type)}`}></div>
+                        <p className="text-sm font-medium">{feedback.company_name}</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1 pl-5">
+                        {getFeedbackTypeText(feedback.feedback_type)} - {getTimeAgo(feedback.created_at)}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">フィードバックがありません</p>
+                )}
               </div>
             </CardContent>
           </Card>
-          
           
           <Card>
             <CardHeader>
@@ -142,57 +217,28 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-sm font-medium">ワンダフル株式会社 - 製品概要</p>
-                    <p className="text-xs text-muted-foreground">14分前に閲覧</p>
-                  </div>
-                  <Link href="/admin/companies/1/access-log">
-                    <Button variant="ghost" size="icon" className="h-6 w-6">
-                      <ArrowUpRight className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                </div>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-sm font-medium">グロベックス - セキュリティ資料</p>
-                    <p className="text-xs text-muted-foreground">1時間前に完了</p>
-                  </div>
-                  <Link href="/admin/companies/2/access-log">
-                    <Button variant="ghost" size="icon" className="h-6 w-6">
-                      <ArrowUpRight className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                </div>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-sm font-medium">イニテック - 事例資料</p>
-                    <p className="text-xs text-muted-foreground">3時間前に閲覧</p>
-                  </div>
-                  <Link href="/admin/companies/3/access-log">
-                    <Button variant="ghost" size="icon" className="h-6 w-6">
-                      <ArrowUpRight className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                </div>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-sm font-medium">アンブレラ - 技術仕様書</p>
-                    <p className="text-xs text-muted-foreground">5時間前に閲覧</p>
-                  </div>
-                  <Link href="/admin/companies/4/access-log">
-                    <Button variant="ghost" size="icon" className="h-6 w-6">
-                      <ArrowUpRight className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                </div>
+                {dashboardData?.recent_activity.length ? (
+                  dashboardData.recent_activity.map((activity, index) => (
+                    <div key={index} className="flex justify-between items-start">
+                      <div>
+                        <p className="text-sm font-medium">{activity.company_name} - {activity.document_title}</p>
+                        <p className="text-xs text-muted-foreground">{getTimeAgo(activity.viewed_at)}に閲覧</p>
+                      </div>
+                      {activity.company_id && (
+                        <Link href={`/admin/companies/${activity.company_id}/access-log`}>
+                          <Button variant="ghost" size="icon" className="h-6 w-6">
+                            <ArrowUpRight className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">最近のアクティビティがありません</p>
+                )}
               </div>
             </CardContent>
           </Card>
-
-
-
-
         </div>
       </div>
     </AdminLayout>

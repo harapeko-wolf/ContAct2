@@ -41,4 +41,9 @@ class Document extends Model
     {
         return $this->hasMany(DocumentView::class);
     }
+
+    public function feedback()
+    {
+        return $this->hasMany(DocumentFeedback::class);
+    }
 }
