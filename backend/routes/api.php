@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\Api\DocumentController;
+use App\Http\Controllers\Api\DashboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -49,6 +50,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
+
+    // ダッシュボード統計
+    Route::get('/admin/dashboard/stats', [DashboardController::class, 'getStats']);
 
     // 会社管理
     Route::apiResource('companies', App\Http\Controllers\Api\CompanyController::class);

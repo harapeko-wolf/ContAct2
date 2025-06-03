@@ -50,7 +50,6 @@ class CompanyController extends Controller
             ], 422);
         }
         $data = $validator->validated();
-        $data['id'] = (string) \Illuminate\Support\Str::uuid();
         $data['user_id'] = $request->user()->id;
         $company = Company::create($data);
         return response()->json(['data' => $company->toArray()], 201);
