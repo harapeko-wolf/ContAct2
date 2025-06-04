@@ -92,7 +92,7 @@ export default function EditCompanyForm({ companyId }: { companyId: string }) {
     try {
       const submitData = {
         ...data,
-        employee_count: data.employee_count ?? null,
+        employee_count: data.employee_count ?? undefined,
       };
       await companyApi.update(companyId, submitData);
       toast({
