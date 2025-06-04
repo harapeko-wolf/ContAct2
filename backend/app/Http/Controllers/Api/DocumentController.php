@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Document;
 use App\Models\DocumentView;
+use App\Models\DocumentFeedback;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -269,5 +270,114 @@ class DocumentController extends Controller
         // 通常のログ一覧
         $logs = $query->paginate(20);
         return response()->json($logs);
+    }
+
+    /**
+     * フィードバックを送信（認証不要）
+     */
+    public function submitFeedback(Request $request, $companyId, $documentId)
+    {
+        $validator = Validator::make($request->all(), [
+            'feedback_type' => 'required|string|max:100',
+            'content' => 'sometimes|string|max:1000',
+            'interest_level' => 'sometimes|integer|min:0|max:100',
+            'selected_option' => 'sometimes|array',
+            'selected_option.id' => 'sometimes|integer',
+            'selected_option.label' => 'sometimes|string|max:255',
+            'selected_option.score' => 'sometimes|integer|min:0|max:100',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'error' => [
+                    'code' => 'VALIDATION_ERROR',
+                    'message' => '入力内容に誤りがあります',
+                    'details' => $validator->errors()
+                ]
+            ], 422);
+        }
+
+        try {
+            $document = Document::where('company_id', $companyId)
+                ->where('id', $documentId)
+                ->firstOrFail();
+
+            $feedback = DocumentFeedback::create([
+                'id' => Str::uuid(),
+                'document_id' => $document->id,
+                'feedback_type' => $request->input('feedback_type'),
+                'content' => $request->input('content'),
+                'feedbacker_ip' => $request->ip(),
+                'feedbacker_user_agent' => $request->userAgent(),
+                'feedback_metadata' => [
+                    'interest_level' => $request->input('interest_level'),
+                    'selected_option' => $request->input('selected_option'),
+                    'company_id' => $document->company_id,
+                    'submitted_at' => now()->toISOString(),
+                ],
+            ]);
+
+            return response()->json([
+                'data' => [
+                    'id' => $feedback->id,
+                    'message' => 'フィードバックが送信されました',
+                    'feedback_summary' => [
+                        'option_label' => $request->input('selected_option.label'),
+                        'score' => $request->input('selected_option.score', $request->input('interest_level')),
+                        'content' => $request->input('content'),
+                    ]
+                ],
+                'meta' => [
+                    'timestamp' => now()->toISOString()
+                ]
+            ], 201);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => [
+                    'code' => 'FEEDBACK_SUBMISSION_ERROR',
+                    'message' => 'フィードバックの送信に失敗しました',
+                    'details' => ['error' => $e->getMessage()]
+                ]
+            ], 500);
+        }
+    }
+
+    /**
+     * ドキュメントのフィードバック一覧を取得
+     */
+    public function getFeedback(Request $request, $companyId, $documentId)
+    {
+        try {
+            $document = Document::where('company_id', $companyId)
+                ->where('id', $documentId)
+                ->firstOrFail();
+
+            $query = DocumentFeedback::where('document_id', $document->id)
+                ->orderBy('created_at', 'desc');
+
+            // フィードバック種別でフィルタ
+            if ($request->has('feedback_type')) {
+                $query->where('feedback_type', $request->input('feedback_type'));
+            }
+
+            $feedback = $query->paginate(20);
+
+            return response()->json([
+                'data' => $feedback,
+                'meta' => [
+                    'timestamp' => now()->toISOString()
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => [
+                    'code' => 'FEEDBACK_FETCH_ERROR',
+                    'message' => 'フィードバックの取得に失敗しました',
+                    'details' => ['error' => $e->getMessage()]
+                ]
+            ], 500);
+        }
     }
 }

@@ -264,10 +264,10 @@ class SettingsController extends Controller
             'title' => AppSetting::get('survey.title', '資料をご覧になる前に'),
             'description' => AppSetting::get('survey.description', '現在の興味度をお聞かせください'),
             'options' => AppSetting::get('survey.options', [
-                ['id' => 1, 'label' => '非常に興味がある'],
-                ['id' => 2, 'label' => 'やや興味がある'],
-                ['id' => 3, 'label' => '詳しい情報が必要'],
-                ['id' => 4, 'label' => '興味なし'],
+                ['id' => 1, 'label' => '非常に興味がある', 'score' => 100],
+                ['id' => 2, 'label' => 'やや興味がある', 'score' => 75],
+                ['id' => 3, 'label' => '詳しい情報が必要', 'score' => 50],
+                ['id' => 4, 'label' => '興味なし', 'score' => 0],
             ]),
         ];
     }
