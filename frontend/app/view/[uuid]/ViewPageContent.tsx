@@ -35,32 +35,38 @@ const PDFViewer = dynamic(() => import('./PDFViewer'), {
   ),
 });
 
-// デモ用のドキュメントデータ
-const documentData = {
-  companyName: '株式会社サンプル',
-  documents: [
-    {
-      id: 1,
-      title: '製品概要資料',
-      url: '/sample.pdf',
-      totalPages: 8,
-    },
-    {
-      id: 2,
-      title: '技術仕様書',
-      url: '/kikaku_sample.pdf',
-      totalPages: 12,
-    }
-  ]
-};
+// 型定義
+interface SurveyOption {
+  id: number;
+  label: string;
+  score: number;
+}
 
-// アンケートの選択肢
-const surveyOptions = [
-  { id: 'very-interested', label: '非常に興味がある', value: 'very_interested' },
-  { id: 'somewhat-interested', label: 'やや興味がある', value: 'somewhat_interested' },
-  { id: 'need-more-info', label: '詳しい情報が必要', value: 'need_more_info' },
-  { id: 'not-interested', label: '興味なし', value: 'not_interested' },
-];
+interface SurveySettings {
+  title: string;
+  description: string;
+  options: SurveyOption[];
+}
+
+interface PublicSettings {
+  'survey.title'?: string;
+  'survey.description'?: string;
+  'survey.options'?: SurveyOption[];
+  'general.require_survey'?: boolean;
+  'general.show_booking_option'?: boolean;
+}
+
+// デフォルトのアンケート設定（フォールバック用）
+const defaultSurveySettings: SurveySettings = {
+  title: '資料を表示する前に',
+  description: '現在の興味レベルをお聞かせください',
+  options: [
+    { id: 1, label: '非常に興味がある', score: 100 },
+    { id: 2, label: 'やや興味がある', score: 75 },
+    { id: 3, label: '詳しい情報が必要', score: 50 },
+    { id: 4, label: '興味なし', score: 0 },
+  ],
+};
 
 // PDFサムネイルコンポーネント
 const PDFThumbnail = ({ pdfUrl, title }: { pdfUrl: string; title: string }) => {
@@ -141,24 +147,67 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
   const [finishedDocs, setFinishedDocs] = useState<string[]>([]);
   const [selectedDocument, setSelectedDocument] = useState<PDF | null>(null);
   const [showViewer, setShowViewer] = useState(false);
+  
+  // アンケート設定の状態
+  const [surveySettings, setSurveySettings] = useState<SurveySettings>(defaultSurveySettings);
+  const [requireSurvey, setRequireSurvey] = useState(true);
+  const [showBookingOption, setShowBookingOption] = useState(true);
+  
   const router = useRouter();
   const { toast } = useToast();
+
+  // 公開設定を取得する関数
+  const fetchPublicSettings = async () => {
+    try {
+      const response = await fetch('/api/settings/public');
+      if (!response.ok) {
+        throw new Error('設定の取得に失敗しました');
+      }
+      const data = await response.json();
+      const settings: PublicSettings = data.data;
+
+      // アンケート設定を更新
+      setSurveySettings({
+        title: settings['survey.title'] || defaultSurveySettings.title,
+        description: settings['survey.description'] || defaultSurveySettings.description,
+        options: settings['survey.options'] || defaultSurveySettings.options,
+      });
+
+      // 機能設定を更新
+      setRequireSurvey(settings['general.require_survey'] ?? true);
+      setShowBookingOption(settings['general.show_booking_option'] ?? true);
+
+      console.log('公開設定を取得しました:', settings);
+    } catch (error) {
+      console.error('公開設定の取得に失敗しました:', error);
+      // エラー時はデフォルト設定を使用
+      setSurveySettings(defaultSurveySettings);
+      setRequireSurvey(true);
+      setShowBookingOption(true);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        // 公開APIを使用
-        const data = await pdfApi.getPublicAll(uuid);
-        setCompanyName(data.company.name);
-        setCompanyData(data.company);
-        setDocuments(data.data);
-        // 公開プレビューURLを使用
-        const urls: { [id: string]: string } = {};
-        for (const doc of data.data) {
-          urls[doc.id] = pdfApi.getPublicPreviewUrl(uuid, doc.id);
-        }
-        setPreviewUrls(urls);
+        // 公開設定とPDFデータを並行取得
+        await Promise.all([
+          fetchPublicSettings(),
+          (async () => {
+            // 公開APIを使用
+            const data = await pdfApi.getPublicAll(uuid);
+            setCompanyName(data.company.name);
+            setCompanyData(data.company);
+            setDocuments(data.data);
+            // 公開プレビューURLを使用
+            const urls: { [id: string]: string } = {};
+            for (const doc of data.data) {
+              urls[doc.id] = pdfApi.getPublicPreviewUrl(uuid, doc.id);
+            }
+            setPreviewUrls(urls);
+          })()
+        ]);
       } catch (error) {
         console.error('データの読み込みに失敗しました:', error);
         setCompanyName('会社名取得エラー');
@@ -173,7 +222,7 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
   }, [uuid]);
   
   // アンケート送信の処理
-  const handleSurveySubmit = () => {
+  const handleSurveySubmit = async () => {
     if (!interestLevel) {
       toast({
         title: '選択してください',
@@ -183,21 +232,94 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
       return;
     }
     
-    // バックエンドへの送信シミュレーション
-    console.log('アンケート送信 UUID:', uuid, '興味レベル:', interestLevel);
+    // ドキュメントが読み込まれているかチェック
+    if (documents.length === 0) {
+      console.warn('ドキュメントがまだ読み込まれていません');
+      toast({
+        title: 'しばらくお待ちください',
+        description: 'ドキュメントの読み込み中です',
+        variant: 'destructive',
+      });
+      return;
+    }
     
-    toast({
-      title: 'ご回答ありがとうございます',
-      description: '資料をご覧いただけます',
-    });
-    
-    setHasCompletedSurvey(true);
+    try {
+      // 選択されたオプションの詳細を取得
+      const selectedOption = surveySettings.options.find(option => option.id.toString() === interestLevel);
+      if (!selectedOption) {
+        toast({
+          title: 'エラーが発生しました',
+          description: '選択されたオプションが見つかりません',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      // 最初のドキュメントにフィードバックを送信
+      const firstDocument = documents[0];
+      
+      console.log('フィードバック送信開始:', {
+        documentId: firstDocument.id,
+        companyId: uuid,
+        selectedOption: selectedOption,
+        documentTitle: firstDocument.title
+      });
+      
+      const response = await fetch(`/api/companies/${uuid}/pdfs/${firstDocument.id}/feedback`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          feedback_type: 'survey_response',
+          content: `${selectedOption.label} (スコア: ${selectedOption.score})`,
+          interest_level: selectedOption.score,
+          selected_option: {
+            id: selectedOption.id,
+            label: selectedOption.label,
+            score: selectedOption.score
+          }
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('フィードバック送信エラー詳細:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData: errorData
+        });
+        throw new Error(`フィードバックの送信に失敗しました (${response.status}: ${response.statusText})`);
+      }
+
+      const result = await response.json();
+      console.log('フィードバック送信成功:', result);
+      
+      toast({
+        title: 'ご回答ありがとうございます',
+        description: '資料をご覧いただけます',
+      });
+      
+      setHasCompletedSurvey(true);
+      
+    } catch (error) {
+      console.error('フィードバック送信エラー:', error);
+      toast({
+        title: 'エラーが発生しました',
+        description: 'フィードバックの送信に失敗しましたが、資料はご覧いただけます',
+        variant: 'destructive',
+      });
+      // エラーが発生してもアンケートは完了扱いにする
+      setHasCompletedSurvey(true);
+    }
   };
 
   // 最終ページ到達時の処理
   const handleLastPageReached = (docId: string) => {
     console.log(`Document ${docId} last page reached, showing booking prompt`);
-    setShowBookingPrompt(true);
+    if (showBookingOption) {
+      setShowBookingPrompt(true);
+    }
   };
 
   const handleDocumentClick = (document: PDF) => {
@@ -221,24 +343,24 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
     );
   }
 
-  // アンケート未回答の場合はアンケートを表示
-  if (!hasCompletedSurvey) {
+  // アンケート未回答かつアンケート必須の場合はアンケートを表示
+  if (!hasCompletedSurvey && requireSurvey) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-md">
           <Card className="shadow-lg">
             <CardHeader>
-              <CardTitle className="text-xl">資料を表示する前に</CardTitle>
+              <CardTitle className="text-xl">{surveySettings.title}</CardTitle>
               <CardDescription>
-                現在の興味レベルをお聞かせください
+                {surveySettings.description}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <RadioGroup value={interestLevel || ''} onValueChange={setInterestLevel}>
-                {surveyOptions.map(option => (
+                {surveySettings.options.map(option => (
                   <div key={option.id} className="flex items-center space-x-2 my-3">
-                    <RadioGroupItem value={option.value} id={option.id} />
-                    <label htmlFor={option.id} className="text-sm font-medium leading-none cursor-pointer">
+                    <RadioGroupItem value={option.id.toString()} id={`option-${option.id}`} />
+                    <label htmlFor={`option-${option.id}`} className="text-sm font-medium leading-none cursor-pointer">
                       {option.label}
                     </label>
                   </div>
@@ -304,19 +426,21 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
         </div>
 
         {/* 固定の予約ボタン */}
-        <div className="fixed bottom-4 right-4 z-50">
-          <Button
-            onClick={() => setShowBookingPrompt(true)}
-            className="shadow-lg gap-2"
-            size="lg"
-          >
-            <Calendar className="h-4 w-4" />
-            候補の日時を見る
-          </Button>
-        </div>
+        {showBookingOption && (
+          <div className="fixed bottom-4 right-4 z-50">
+            <Button
+              onClick={() => setShowBookingPrompt(true)}
+              className="shadow-lg gap-2"
+              size="lg"
+            >
+              <Calendar className="h-4 w-4" />
+              候補の日時を見る
+            </Button>
+          </div>
+        )}
 
         {/* ミーティング予約モーダル */}
-        {showBookingPrompt && (
+        {showBookingPrompt && showBookingOption && (
           <Dialog open={showBookingPrompt} onOpenChange={setShowBookingPrompt}>
             <DialogContent className="sm:max-w-[500px]">
               <DialogHeader className="text-center">
@@ -354,14 +478,6 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
                   PDF資料を閲覧中
                 </DialogDescription>
               </div>
-              {/* <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleViewerClose}
-                className="h-8 w-8 rounded-full"
-              >
-                <X className="h-4 w-4" />
-              </Button> */}
             </DialogHeader>
             <div className="flex-1 overflow-hidden min-h-0">
               {selectedDocument && (
