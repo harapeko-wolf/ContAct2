@@ -68,28 +68,117 @@ export default function DashboardPage() {
     }
   };
 
-  // フィードバックタイプの日本語変換
-  const getFeedbackTypeText = (type: string) => {
-    const typeMap: { [key: string]: string } = {
-      'very_interested': '非常に興味あり',
-      'interested': 'やや興味あり',
-      'not_interested': '興味なし',
-      'like': '良い',
-      'dislike': '良くない',
-    };
-    return typeMap[type] || type;
+  // フィードバック情報の解析
+  const parseFeedbackData = (feedback: any) => {
+    // contentからスコア情報を抽出を試行
+    const content = feedback.content || '';
+    let score = null;
+    let label = '';
+
+    // "スコア: 100" パターンの抽出
+    const scoreMatch = content.match(/スコア:\s*(\d+)/);
+    if (scoreMatch) {
+      score = parseInt(scoreMatch[1]);
+    }
+
+    // metadata からの情報取得
+    if (feedback.metadata) {
+      // 新しい形式: selected_option.score
+      if (feedback.metadata.selected_option?.score !== undefined) {
+        score = feedback.metadata.selected_option.score;
+        label = feedback.metadata.selected_option.label || '';
+      }
+      // 古い形式: interest_level
+      else if (feedback.metadata.interest_level !== undefined && feedback.metadata.interest_level !== null) {
+        score = feedback.metadata.interest_level;
+      }
+    }
+
+    // ラベルの抽出（contentから）
+    if (!label) {
+      // "非常に興味がある (スコア: 100)" パターンからラベル抽出
+      const labelMatch = content.match(/^(.+?)\s*\(スコア:/);
+      if (labelMatch) {
+        label = labelMatch[1].trim();
+      } else {
+        label = content.replace(/\s*\(スコア:.*?\)/, '').trim();
+      }
+    }
+
+    return { score, label };
   };
 
-  // フィードバックタイプの色
-  const getFeedbackColor = (type: string) => {
-    const colorMap: { [key: string]: string } = {
-      'very_interested': 'bg-green-500',
-      'interested': 'bg-yellow-500',
-      'not_interested': 'bg-red-500',
-      'like': 'bg-green-500',
-      'dislike': 'bg-red-500',
-    };
-    return colorMap[type] || 'bg-gray-500';
+  // 設定に基づく色マッピング（動的）
+  const getFeedbackColor = (feedback: any) => {
+    const { score } = parseFeedbackData(feedback);
+    
+    if (score !== null && dashboardData?.survey_settings?.options) {
+      const options = dashboardData.survey_settings.options;
+      
+      // スコアに基づいて適切な選択肢を見つける
+      for (const option of options.sort((a, b) => b.score - a.score)) {
+        if (score >= option.score) {
+          // スコアの範囲に基づいて色を決定
+          if (option.score >= 90) return 'bg-green-600';      // 濃い緑: 非常に高い
+          if (option.score >= 75) return 'bg-green-500';      // 緑: 高い
+          if (option.score >= 50) return 'bg-yellow-500';     // 黄色: 中間
+          if (option.score >= 25) return 'bg-orange-500';     // オレンジ: 低い
+          return 'bg-red-500';                                 // 赤: 非常に低い
+        }
+      }
+    }
+    
+    // フォールバック（設定が取得できない場合）
+    if (score !== null) {
+      if (score >= 90) return 'bg-green-600';      
+      if (score >= 75) return 'bg-green-500';      
+      if (score >= 50) return 'bg-yellow-500';     
+      if (score >= 25) return 'bg-orange-500';     
+      return 'bg-red-500';                         
+    }
+    
+    return 'bg-gray-500';
+  };
+
+  // 設定に基づくテキスト表示（動的）
+  const getFeedbackText = (feedback: any) => {
+    const { score, label } = parseFeedbackData(feedback);
+    
+    // 既存のラベルがある場合はそれを使用
+    if (label) {
+      return `${label}${score !== null ? ` (${score}点)` : ''}`;
+    }
+    
+    // 設定されたスコア範囲に基づいてラベルを決定
+    if (score !== null && dashboardData?.survey_settings?.options) {
+      const options = dashboardData.survey_settings.options;
+      
+      // 最も近いスコアの選択肢を見つける
+      let closestOption = options[0];
+      let minDiff = Math.abs(score - options[0].score);
+      
+      for (const option of options) {
+        const diff = Math.abs(score - option.score);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closestOption = option;
+        }
+      }
+      
+      return `${closestOption.label} (${score}点)`;
+    }
+    
+    // フォールバック: スコアベースの表示
+    if (score !== null) {
+      if (score >= 90) return `非常に興味あり (${score}点)`;
+      if (score >= 75) return `かなり興味あり (${score}点)`;
+      if (score >= 50) return `やや興味あり (${score}点)`;
+      if (score >= 25) return `少し興味あり (${score}点)`;
+      return `興味なし (${score}点)`;
+    }
+    
+    // 最終フォールバック
+    return feedback.feedback_type || '回答あり';
   };
 
   if (!mounted) {
@@ -193,11 +282,11 @@ export default function DashboardPage() {
                   dashboardData.recent_feedback.map((feedback, index) => (
                     <div key={index}>
                       <div className="flex items-center gap-2">
-                        <div className={`w-3 h-3 rounded-full ${getFeedbackColor(feedback.feedback_type)}`}></div>
+                        <div className={`w-3 h-3 rounded-full ${getFeedbackColor(feedback)}`}></div>
                         <p className="text-sm font-medium">{feedback.company_name}</p>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1 pl-5">
-                        {getFeedbackTypeText(feedback.feedback_type)} - {getTimeAgo(feedback.created_at)}
+                        {getFeedbackText(feedback)} - {getTimeAgo(feedback.created_at)}
                       </p>
                     </div>
                   ))

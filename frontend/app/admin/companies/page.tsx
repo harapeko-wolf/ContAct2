@@ -15,7 +15,12 @@ import {
   Users,
   Loader2,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Trophy,
+  Target
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { companyApi, Company, PaginatedResponse } from '@/lib/api';
@@ -65,6 +70,14 @@ const REVERSE_STATUS_MAP = {
   '失注': 'inactive',
 } as const;
 
+// ソート設定
+const SORT_OPTIONS = [
+  { value: 'created_at', label: '作成日時' },
+  { value: 'name', label: '会社名' },
+  { value: 'score', label: 'スコア' },
+  { value: 'feedback_count', label: 'フィードバック数' },
+] as const;
+
 export default function CompaniesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<StatusType>('すべて');
@@ -74,6 +87,8 @@ export default function CompaniesPage() {
   const [perPage, setPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [sortBy, setSortBy] = useState('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [statusChangeDialog, setStatusChangeDialog] = useState<{
     isOpen: boolean;
     companyId: string | null;
@@ -94,11 +109,11 @@ export default function CompaniesPage() {
 
   useEffect(() => {
     loadCompanies();
-  }, [currentPage, perPage]);
+  }, [currentPage, perPage, sortBy, sortOrder]);
 
   const loadCompanies = async () => {
     try {
-      const data = await companyApi.getAll(currentPage, perPage);
+      const data = await companyApi.getAll(currentPage, perPage, sortBy, sortOrder);
       // ページネーション形式のレスポンス処理
       if (data.data) {
         setCompanies(data.data);
@@ -121,6 +136,30 @@ export default function CompaniesPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSort = (newSortBy: string) => {
+    if (sortBy === newSortBy) {
+      // 同じ列をクリックした場合は順序を反転
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      // 新しい列をクリックした場合
+      setSortBy(newSortBy);
+      setSortOrder(newSortBy === 'score' ? 'desc' : 'asc'); // スコアはデフォルト降順
+    }
+  };
+
+  const getSortIcon = (column: string) => {
+    if (sortBy !== column) return <ArrowUpDown className="h-4 w-4" />;
+    return sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
+  };
+
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return 'text-green-600 bg-green-50';
+    if (score >= 60) return 'text-blue-600 bg-blue-50';
+    if (score >= 40) return 'text-yellow-600 bg-yellow-50';
+    if (score >= 20) return 'text-orange-600 bg-orange-50';
+    return 'text-red-600 bg-red-50';
   };
 
   const handleDelete = async (id: string) => {
@@ -230,7 +269,7 @@ export default function CompaniesPage() {
           <div>
             <h2 className="text-3xl font-bold tracking-tight mb-2">会社一覧</h2>
             <p className="text-muted-foreground">
-              取引先企業と資料を管理
+              取引先企業と資料を管理（{totalItems}社）
             </p>
           </div>
           <Link href="/admin/companies/create">
@@ -241,33 +280,59 @@ export default function CompaniesPage() {
           </Link>
         </div>
         
-        <div className="flex items-center gap-4">
-          <div className="relative w-full max-w-sm">
-            <Input
-              placeholder="会社を検索..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-            <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="relative w-full max-w-sm">
+              <Input
+                placeholder="会社を検索..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+              <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className="flex gap-2">
+              {STATUS_OPTIONS.map((status) => (
+                <Button
+                  key={status}
+                  variant={selectedStatus === status ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedStatus(status)}
+                  className={cn(
+                    "min-w-[80px]",
+                    status === '受注' && selectedStatus === status && "bg-green-600",
+                    status === '検討中' && selectedStatus === status && "bg-blue-600",
+                    status === '失注' && selectedStatus === status && "bg-red-600"
+                  )}
+                >
+                  {status}
+                </Button>
+              ))}
+            </div>
           </div>
-          <div className="flex gap-2">
-            {STATUS_OPTIONS.map((status) => (
-              <Button
-                key={status}
-                variant={selectedStatus === status ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedStatus(status)}
-                className={cn(
-                  "min-w-[80px]",
-                  status === '受注' && selectedStatus === status && "bg-green-600",
-                  status === '検討中' && selectedStatus === status && "bg-blue-600",
-                  status === '失注' && selectedStatus === status && "bg-red-600"
-                )}
-              >
-                {status}
-              </Button>
-            ))}
+          
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">並び順:</span>
+            <Select value={sortBy} onValueChange={handleSort}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SORT_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              className="px-2"
+            >
+              {getSortIcon(sortBy)}
+            </Button>
           </div>
         </div>
         
@@ -276,8 +341,8 @@ export default function CompaniesPage() {
             <Card key={company.id ?? `company-${index}`} className="overflow-hidden">
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
                       <span className={cn(
                         "px-2 py-0.5 text-xs font-medium rounded-full",
                         company.status === 'active' && "bg-green-100 text-green-700",
@@ -286,6 +351,25 @@ export default function CompaniesPage() {
                       )}>
                         {STATUS_MAP[company.status]}
                       </span>
+                      
+                      {/* スコア表示 */}
+                      {company.average_score !== undefined && company.average_score > 0 && (
+                        <span className={cn(
+                          "px-2 py-0.5 text-xs font-medium rounded-full flex items-center gap-1",
+                          getScoreColor(company.average_score)
+                        )}>
+                          <Trophy className="h-3 w-3" />
+                          {company.average_score}点
+                        </span>
+                      )}
+                      
+                      {/* フィードバック数表示 */}
+                      {company.feedback_count !== undefined && company.feedback_count > 0 && (
+                        <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-700 flex items-center gap-1">
+                          <Target className="h-3 w-3" />
+                          {company.feedback_count}件
+                        </span>
+                      )}
                     </div>
                     <CardTitle className="text-xl">
                       {company.name}
@@ -401,30 +485,71 @@ export default function CompaniesPage() {
                     </div>
                     <div>
                       <p className="text-muted-foreground">従業員数</p>
-                      <p className="font-medium">{company.employee_count || '未設定'}</p>
+                      <p className="font-medium">{company.employee_count ? `${company.employee_count}人` : '未設定'}</p>
                     </div>
                   </div>
-                  
-                  <div className="flex flex-wrap gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      className="gap-2"
-                      onClick={() => copyLink(company.id)}
-                    >
-                      <ClipboardCopy className="h-3.5 w-3.5" />
-                      リンクをコピー
-                    </Button>
-                    <Link href={`/view/${company.id}`} target="_blank">
-                      <Button variant="outline" size="sm" className="gap-2">
-                        <Eye className="h-3.5 w-3.5" />
-                        プレビュー
+
+                  {/* スコア詳細表示 */}
+                  {company.average_score !== undefined && company.average_score > 0 && (
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">総合エンゲージメントスコア</span>
+                        <div className="flex items-center gap-2">
+                          <span className={cn("font-bold", getScoreColor(company.average_score).split(' ')[0])}>
+                            {company.average_score}点
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            ({company.feedback_count}件のフィードバック)
+                          </span>
+                        </div>
+                      </div>
+                      <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={cn(
+                            "h-2 rounded-full transition-all",
+                            company.average_score >= 80 ? "bg-green-500" :
+                            company.average_score >= 60 ? "bg-blue-500" :
+                            company.average_score >= 40 ? "bg-yellow-500" :
+                            company.average_score >= 20 ? "bg-orange-500" : "bg-red-500"
+                          )}
+                          style={{ width: `${Math.min(company.average_score, 100)}%` }}
+                        />
+                      </div>
+                      
+                      {/* スコア内訳 */}
+                      {(company.survey_score !== undefined || company.engagement_score !== undefined) && (
+                        <div className="mt-3 space-y-2">
+                          <div className="text-xs text-muted-foreground font-medium">スコア内訳:</div>
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            {company.survey_score !== undefined && company.survey_score > 0 && (
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">アンケート:</span>
+                                <span className="font-medium">{company.survey_score}点</span>
+                              </div>
+                            )}
+                            {company.engagement_score !== undefined && company.engagement_score > 0 && (
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">閲覧時間:</span>
+                                <span className="font-medium">{company.engagement_score}点</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <Link href={`/admin/companies/${company.id}/pdfs`} className="flex-1">
+                      <Button variant="outline" size="sm" className="w-full gap-2">
+                        <FileText className="h-4 w-4" />
+                        PDF管理
                       </Button>
                     </Link>
-                    <Link href={`/admin/companies/${company.id}/pdfs`}>
-                      <Button variant="outline" size="sm" className="gap-2">
-                        <FileText className="h-3.5 w-3.5" />
-                        PDF管理
+                    <Link href={`/admin/companies/${company.id}/access-log`} className="flex-1">
+                      <Button variant="outline" size="sm" className="w-full gap-2">
+                        <BarChart3 className="h-4 w-4" />
+                        分析
                       </Button>
                     </Link>
                   </div>
@@ -433,115 +558,48 @@ export default function CompaniesPage() {
             </Card>
           ))}
         </div>
-        
-        {filteredCompanies.length === 0 && (
-          <div className="text-center py-10">
-            <FileText className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">会社が見つかりません</h3>
-            <p className="text-muted-foreground mb-4">
-              {searchTerm ? "別のキーワードで検索してください" : "最初の会社を追加して始めましょう"}
-            </p>
-            <Link href="/admin/companies/create">
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" />
-                会社を追加
-              </Button>
-            </Link>
-          </div>
-        )}
 
-        {totalItems > 0 && (
-          <div className="flex items-center justify-between border-t pt-4">
+        {/* ページネーション */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <p className="text-sm text-muted-foreground">
-                表示件数
-              </p>
-              <Select
-                value={perPage.toString()}
-                onValueChange={(value) => {
-                  setPerPage(Number(value));
-                  setCurrentPage(1);
-                }}
-              >
-                <SelectTrigger className="w-[70px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="20">20</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-sm text-muted-foreground">
-                全{totalItems}件中 {(currentPage - 1) * perPage + 1}-
-                {Math.min(currentPage * perPage, totalItems)}件を表示
+                {totalItems}件中 {((currentPage - 1) * perPage) + 1}-{Math.min(currentPage * perPage, totalItems)}件を表示
               </p>
             </div>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage(currentPage - 1)}
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
               >
                 <ChevronLeft className="h-4 w-4" />
+                前へ
               </Button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter(page => {
-                  if (totalPages <= 7) return true;
-                  if (page === 1 || page === totalPages) return true;
-                  if (page >= currentPage - 1 && page <= currentPage + 1) return true;
-                  return false;
-                })
-                .map((page, index, array) => {
-                  if (index > 0 && array[index - 1] !== page - 1) {
-                    return (
-                      <span key={`ellipsis-${page}`} className="px-2">
-                        ...
-                      </span>
-                    );
-                  }
-                  return (
-                    <Button
-                      key={page}
-                      variant={currentPage === page ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setCurrentPage(page)}
-                    >
-                      {page}
-                    </Button>
-                  );
-                })}
+              <span className="text-sm text-muted-foreground">
+                {currentPage} / {totalPages}
+              </span>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage(currentPage + 1)}
+                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage === totalPages}
               >
+                次へ
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           </div>
         )}
 
-        <AlertDialog 
-          open={statusChangeDialog.isOpen} 
-          onOpenChange={(open) => {
-            if (!open) {
-              setStatusChangeDialog({
-                isOpen: false,
-                companyId: null,
-                newStatus: null,
-              });
-            }
-          }}
-        >
+        {/* ステータス変更確認ダイアログ */}
+        <AlertDialog open={statusChangeDialog.isOpen} onOpenChange={(open) => !open && setStatusChangeDialog({ isOpen: false, companyId: null, newStatus: null })}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>ステータスを変更</AlertDialogTitle>
+              <AlertDialogTitle>ステータス変更の確認</AlertDialogTitle>
               <AlertDialogDescription>
-                ステータスを変更してもよろしいですか？
+                この会社のステータスを変更してもよろしいですか？
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -553,34 +611,28 @@ export default function CompaniesPage() {
                   }
                 }}
               >
-                変更する
+                変更
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
 
-        <AlertDialog 
-          open={deleteDialog.isOpen} 
-          onOpenChange={(open) => {
-            if (!open) {
-              setDeleteDialog({
-                isOpen: false,
-                companyId: null,
-              });
-            }
-          }}
-        >
+        {/* 削除確認ダイアログ */}
+        <AlertDialog open={deleteDialog.isOpen} onOpenChange={(open) => !open && setDeleteDialog({ isOpen: false, companyId: null })}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>会社を削除</AlertDialogTitle>
+              <AlertDialogTitle>会社削除の確認</AlertDialogTitle>
               <AlertDialogDescription>
-                この会社を削除してもよろしいですか？この操作は取り消せません。
+                この会社とそのすべてのデータを削除します。この操作は取り消せません。
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>キャンセル</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDelete}>
-                削除する
+              <AlertDialogAction
+                className="bg-red-600 hover:bg-red-700"
+                onClick={confirmDelete}
+              >
+                削除
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
