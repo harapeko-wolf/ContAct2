@@ -571,7 +571,7 @@ export default function CompanyPDFsPage() {
                   <div className="flex justify-center bg-gray-50 rounded-lg p-4">
                     <iframe
                       src={previewModal.pdfUrl}
-                      className="w-full h-96"
+                      className="w-full aspect-video"
                       title="PDF Preview"
                       style={{ border: 'none' }}
                     />

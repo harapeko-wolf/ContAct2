@@ -65,7 +65,7 @@ export default function CreateCompanyPage() {
     try {
       const submitData = {
         ...data,
-        employee_count: data.employee_count ?? null,
+        employee_count: data.employee_count ?? undefined,
       };
       await companyApi.create(submitData);
       
