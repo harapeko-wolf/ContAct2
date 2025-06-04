@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Cache;
 
 class AppSetting extends Model
 {
@@ -24,24 +23,20 @@ class AppSetting extends Model
     ];
 
     /**
-     * 設定値を取得（キャッシュ付き）
+     * 設定値を取得
      */
     public static function get(string $key, $default = null)
     {
-        $cacheKey = "app_setting_{$key}";
-
-        return Cache::remember($cacheKey, 3600, function () use ($key, $default) {
-            $setting = self::where('key', $key)->first();
-            return $setting ? $setting->value : $default;
-        });
+        $setting = self::where('key', $key)->first();
+        return $setting ? $setting->value : $default;
     }
 
     /**
-     * 設定値を保存（キャッシュも更新）
+     * 設定値を保存
      */
     public static function set(string $key, $value, string $description = null, string $type = 'string', bool $is_public = false)
     {
-        $setting = self::updateOrCreate(
+        return self::updateOrCreate(
             ['key' => $key],
             [
                 'value' => $value,
@@ -50,12 +45,6 @@ class AppSetting extends Model
                 'is_public' => $is_public,
             ]
         );
-
-        // キャッシュを更新
-        $cacheKey = "app_setting_{$key}";
-        Cache::put($cacheKey, $value, 3600);
-
-        return $setting;
     }
 
     /**
@@ -93,35 +82,13 @@ class AppSetting extends Model
      */
     public static function getPublicSettings()
     {
-        $cacheKey = "public_settings";
+        $settings = self::where('is_public', true)->get();
+        $result = [];
 
-        return Cache::remember($cacheKey, 3600, function () {
-            $settings = self::where('is_public', true)->get();
-            $result = [];
+        foreach ($settings as $setting) {
+            $result[$setting->key] = $setting->value;
+        }
 
-            foreach ($settings as $setting) {
-                $result[$setting->key] = $setting->value;
-            }
-
-            return $result;
-        });
-    }
-
-    /**
-     * 設定値削除時にキャッシュもクリア
-     */
-    protected static function boot()
-    {
-        parent::boot();
-
-        static::saved(function ($setting) {
-            Cache::forget("app_setting_{$setting->key}");
-            Cache::forget("public_settings");
-        });
-
-        static::deleted(function ($setting) {
-            Cache::forget("app_setting_{$setting->key}");
-            Cache::forget("public_settings");
-        });
+        return $result;
     }
 }
