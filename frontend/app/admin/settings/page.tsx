@@ -24,6 +24,7 @@ interface GeneralSettings {
 interface SurveyOption {
   id: number;
   label: string;
+  score: number;
 }
 
 interface SurveySettings {
@@ -168,10 +169,10 @@ export default function SettingsPage() {
             title: data.data.survey?.title || '資料をご覧になる前に',
             description: data.data.survey?.description || '現在の興味度をお聞かせください',
             options: data.data.survey?.options?.length > 0 ? data.data.survey.options : [
-              { id: 1, label: '非常に興味がある' },
-              { id: 2, label: 'やや興味がある' },
-              { id: 3, label: '詳しい情報が必要' },
-              { id: 4, label: '興味なし' },
+              { id: 1, label: '非常に興味がある', score: 100 },
+              { id: 2, label: 'やや興味がある', score: 75 },
+              { id: 3, label: '詳しい情報が必要', score: 50 },
+              { id: 4, label: '興味なし', score: 0 },
             ],
           };
           
@@ -367,16 +368,22 @@ export default function SettingsPage() {
   };
 
   // アンケート選択肢の操作
-  const updateSurveyOption = (id: number, label: string) => {
+  const updateSurveyOption = (id: number, updates: Partial<SurveyOption>) => {
     const updatedOptions = settings.survey.options.map(option => 
-      option.id === id ? { ...option, label } : option
+      option.id === id ? { ...option, ...updates } : option
     );
     updateSurveySettings({ options: updatedOptions });
   };
 
   const addSurveyOption = () => {
-    const newId = Math.max(...settings.survey.options.map(o => o.id), 0) + 1;
-    const newOption = { id: newId, label: '新しい選択肢' };
+    const maxId = Math.max(...settings.survey.options.map(o => o.id), 0);
+    const maxScore = Math.max(...settings.survey.options.map(o => o.score), 0);
+    const newId = maxId + 1;
+    const newOption = { 
+      id: newId, 
+      label: '新しい選択肢',
+      score: Math.max(maxScore - 25, 0) // 前の最高スコアから25引いた値、最低0
+    };
     updateSurveySettings({ 
       options: [...settings.survey.options, newOption] 
     });
@@ -400,10 +407,10 @@ export default function SettingsPage() {
       title: '資料をご覧になる前に',
       description: '現在の興味度をお聞かせください',
       options: [
-        { id: 1, label: '非常に興味がある' },
-        { id: 2, label: 'やや興味がある' },
-        { id: 3, label: '詳しい情報が必要' },
-        { id: 4, label: '興味なし' },
+        { id: 1, label: '非常に興味がある', score: 100 },
+        { id: 2, label: 'やや興味がある', score: 75 },
+        { id: 3, label: '詳しい情報が必要', score: 50 },
+        { id: 4, label: '興味なし', score: 0 },
       ],
     });
   };
@@ -604,20 +611,20 @@ export default function SettingsPage() {
                 <span className="text-sm">未保存の変更があります</span>
               </div>
             )}
-            <Button onClick={handleSaveSettings} disabled={isSaving} className="gap-2">
-              {isSaving ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  保存中...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  変更を保存
-                </>
-              )}
-            </Button>
-          </div>
+          <Button onClick={handleSaveSettings} disabled={isSaving} className="gap-2">
+            {isSaving ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                保存中...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4" />
+                変更を保存
+              </>
+            )}
+          </Button>
+        </div>
         </div>
 
         {hasUnsavedChanges && (
@@ -871,105 +878,119 @@ export default function SettingsPage() {
                   
                   <div className="space-y-4">
                     <h3 className="text-lg font-medium">機能設定</h3>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label htmlFor="trackPageViews">ページビュー追跡</Label>
-                        <p className="text-sm text-muted-foreground">
-                          閲覧されたページと閲覧時間を記録
-                        </p>
-                      </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="trackPageViews">ページビュー追跡</Label>
+                      <p className="text-sm text-muted-foreground">
+                        閲覧されたページと閲覧時間を記録
+                      </p>
+                    </div>
                       <Switch 
                         id="trackPageViews" 
                         checked={settings.general.trackPageViews}
                         onCheckedChange={(checked) => updateGeneralSettings({ trackPageViews: checked })}
                       />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="requireSurvey">閲覧前のアンケート要求</Label>
+                      <p className="text-sm text-muted-foreground">
+                        資料閲覧前に興味度を確認
+                      </p>
                     </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label htmlFor="requireSurvey">閲覧前のアンケート要求</Label>
-                        <p className="text-sm text-muted-foreground">
-                          資料閲覧前に興味度を確認
-                        </p>
-                      </div>
                       <Switch 
                         id="requireSurvey" 
                         checked={settings.general.requireSurvey}
                         onCheckedChange={(checked) => updateGeneralSettings({ requireSurvey: checked })}
                       />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="showBookingOption">ミーティング予約オプションを表示</Label>
+                      <p className="text-sm text-muted-foreground">
+                        資料閲覧完了後に予約プロンプトを表示
+                      </p>
                     </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label htmlFor="showBookingOption">ミーティング予約オプションを表示</Label>
-                        <p className="text-sm text-muted-foreground">
-                          資料閲覧完了後に予約プロンプトを表示
-                        </p>
-                      </div>
                       <Switch 
                         id="showBookingOption" 
                         checked={settings.general.showBookingOption}
                         onCheckedChange={(checked) => updateGeneralSettings({ showBookingOption: checked })}
                       />
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
           )}
           
           {/* Survey Options - Admin Only */}
           {isAdmin && settings.survey && (
-            <TabsContent value="survey" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>アンケート設定</CardTitle>
-                  <CardDescription>
-                    ユーザーに表示する興味度アンケートをカスタマイズ
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="surveyTitle">アンケートタイトル</Label>
+          <TabsContent value="survey" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>アンケート設定</CardTitle>
+                <CardDescription>
+                  ユーザーに表示する興味度アンケートをカスタマイズ
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="surveyTitle">アンケートタイトル</Label>
                     <Input 
                       id="surveyTitle" 
                       value={settings.survey.title}
                       onChange={(e) => updateSurveySettings({ title: e.target.value })}
                       placeholder="例: 資料への興味度をお聞かせください"
                     />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="surveyDescription">アンケート説明</Label>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="surveyDescription">アンケート説明</Label>
                     <Input 
                       id="surveyDescription" 
                       value={settings.survey.description}
                       onChange={(e) => updateSurveySettings({ description: e.target.value })}
                       placeholder="例: より良い資料をご提供するため、ご協力をお願いします"
                     />
-                  </div>
+                </div>
+                
+                <Separator />
+                
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">アンケート選択肢</h3>
+                  <p className="text-sm text-muted-foreground">
+                    興味度アンケートの選択肢をカスタマイズ
+                  </p>
                   
-                  <Separator />
-                  
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium">アンケート選択肢</h3>
-                    <p className="text-sm text-muted-foreground">
-                      興味度アンケートの選択肢をカスタマイズ
-                    </p>
-                    
                     {settings.survey.options.map((option, index) => (
-                      <div key={option.id} className="flex items-center gap-4">
-                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center font-medium text-sm">
+                    <div key={option.id} className="flex items-center gap-4 p-4 border rounded-lg">
+                      <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center font-medium text-sm">
                           {index + 1}
-                        </div>
-                        <div className="flex-1">
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 flex-1">
+                        <div>
+                          <Label className="text-sm">選択肢テキスト</Label>
                           <Input 
                             value={option.label} 
-                            onChange={(e) => updateSurveyOption(option.id, e.target.value)}
+                            onChange={(e) => updateSurveyOption(option.id, { label: e.target.value })}
                             placeholder={`選択肢 ${index + 1}`}
                           />
                         </div>
+                        <div>
+                          <Label className="text-sm">スコア（0-100）</Label>
+                          <Input 
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={option.score} 
+                            onChange={(e) => updateSurveyOption(option.id, { score: parseInt(e.target.value) || 0 })}
+                            placeholder="スコア値"
+                          />
+                        </div>
+                      </div>
                         {settings.survey.options.length > 2 && (
                           <Button 
                             variant="outline" 
@@ -979,10 +1000,10 @@ export default function SettingsPage() {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
-                      </div>
-                    ))}
-                    
-                    <div className="flex gap-2">
+                    </div>
+                  ))}
+                  
+                  <div className="flex gap-2">
                       <Button variant="outline" className="flex-1" onClick={addSurveyOption}>
                         <Plus className="h-4 w-4 mr-2" />
                         選択肢を追加
@@ -991,85 +1012,85 @@ export default function SettingsPage() {
                         デフォルトに戻す
                       </Button>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
           )}
           
           {/* Scoring Settings */}
           {isAdmin && settings.scoring && (
-            <TabsContent value="scoring" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>エンゲージメントスコアリング</CardTitle>
-                  <CardDescription>
-                    エンゲージメントスコアの計算方法を設定
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="timeThreshold">最小閲覧時間（秒）</Label>
+          <TabsContent value="scoring" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>エンゲージメントスコアリング</CardTitle>
+                <CardDescription>
+                  エンゲージメントスコアの計算方法を設定
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="timeThreshold">最小閲覧時間（秒）</Label>
                     <Input 
                       id="timeThreshold" 
                       type="number" 
                       value={settings.scoring.timeThreshold}
                       onChange={(e) => updateScoringSettings({ timeThreshold: parseInt(e.target.value) || 0 })}
                     />
-                    <p className="text-sm text-muted-foreground">
-                      ページが閲覧されたとカウントする最小時間（秒）
-                    </p>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="completionBonus">完了ボーナスポイント</Label>
+                  <p className="text-sm text-muted-foreground">
+                    ページが閲覧されたとカウントする最小時間（秒）
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="completionBonus">完了ボーナスポイント</Label>
                     <Input 
                       id="completionBonus" 
                       type="number" 
                       value={settings.scoring.completionBonus}
                       onChange={(e) => updateScoringSettings({ completionBonus: parseInt(e.target.value) || 0 })}
                     />
-                    <p className="text-sm text-muted-foreground">
-                      資料を最後まで閲覧した際に付与される追加ポイント
-                    </p>
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    資料を最後まで閲覧した際に付与される追加ポイント
+                  </p>
+                </div>
+                
+                <Separator />
+                
+                <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="text-lg font-medium">時間ベースのスコアリング</h3>
-                        <p className="text-sm text-muted-foreground">
-                          各ページの閲覧時間に応じて付与されるポイント
-                        </p>
-                      </div>
+                  <h3 className="text-lg font-medium">時間ベースのスコアリング</h3>
+                  <p className="text-sm text-muted-foreground">
+                    各ページの閲覧時間に応じて付与されるポイント
+                  </p>
+                    </div>
                       <Button variant="outline" size="sm" onClick={addScoringTier}>
                         <Plus className="h-4 w-4 mr-2" />
                         層を追加
                       </Button>
-                    </div>
-                    
+                  </div>
+                  
                     {settings.scoring.tiers.map((tier, index) => (
                       <div key={index} className="flex items-center gap-4 p-4 border rounded-lg">
                         <div className="grid grid-cols-2 gap-4 flex-1">
-                          <div>
+                    <div>
                             <Label>レベル{index + 1}（秒）</Label>
                             <Input 
                               type="number" 
                               value={tier.timeThreshold}
                               onChange={(e) => updateScoringTier(index, { timeThreshold: parseInt(e.target.value) || 0 })}
                             />
-                          </div>
-                          <div>
+                    </div>
+                    <div>
                             <Label>ポイント</Label>
                             <Input 
                               type="number" 
                               value={tier.points}
                               onChange={(e) => updateScoringTier(index, { points: parseInt(e.target.value) || 0 })}
                             />
-                          </div>
-                        </div>
+                    </div>
+                  </div>
                         {settings.scoring.tiers.length > 1 && (
                           <Button 
                             variant="outline" 
@@ -1079,12 +1100,12 @@ export default function SettingsPage() {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
-                      </div>
+                    </div>
                     ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
           )}
         </Tabs>
       </div>

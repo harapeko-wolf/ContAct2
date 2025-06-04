@@ -79,12 +79,12 @@ class AppSettingsSeeder extends Seeder
             ['key' => 'survey.options'],
             [
                 'value' => [
-                    ['id' => 1, 'label' => '非常に興味がある'],
-                    ['id' => 2, 'label' => 'やや興味がある'],
-                    ['id' => 3, 'label' => '詳しい情報が必要'],
-                    ['id' => 4, 'label' => '興味なし'],
+                    ['id' => 1, 'label' => '非常に興味がある', 'score' => 100],
+                    ['id' => 2, 'label' => 'やや興味がある', 'score' => 75],
+                    ['id' => 3, 'label' => '詳しい情報が必要', 'score' => 50],
+                    ['id' => 4, 'label' => '興味なし', 'score' => 0],
                 ],
-                'description' => 'アンケート選択肢',
+                'description' => 'アンケート選択肢（スコア付き）',
                 'type' => 'array',
                 'is_public' => true
             ]

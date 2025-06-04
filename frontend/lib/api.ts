@@ -45,6 +45,10 @@ export interface Company {
   booking_link?: string;
   created_at: string;
   updated_at: string;
+  average_score?: number;
+  feedback_count?: number;
+  engagement_score?: number;
+  survey_score?: number;
 }
 
 export interface PaginatedResponse<T> {
@@ -68,12 +72,13 @@ export interface PaginatedResponse<T> {
 }
 
 export const companyApi = {
-  getAll: (page: number = 1, perPage: number = 10) => 
-    api.get<PaginatedResponse<Company>>(`/companies?page=${page}&per_page=${perPage}`).then((res) => res.data),
+  getAll: (page: number = 1, perPage: number = 10, sortBy?: string, sortOrder?: string) => 
+    api.get<PaginatedResponse<Company>>(`/companies?page=${page}&per_page=${perPage}${sortBy ? `&sort_by=${sortBy}` : ''}${sortOrder ? `&sort_order=${sortOrder}` : ''}`).then((res) => res.data),
   get: (id: string) => api.get<Company>(`/companies/${id}`).then((res) => res.data),
   create: (data: Partial<Company>) => api.post<Company>('/companies', data).then((res) => res.data),
   update: (id: string, data: Partial<Company>) => api.put<Company>(`/companies/${id}`, data).then((res) => res.data),
   delete: (id: string) => api.delete(`/companies/${id}`).then((res) => res.data),
+  getScoreDetails: (id: string) => api.get(`/companies/${id}/score-details`).then((res) => res.data),
 };
 
 export interface PDF {
@@ -193,6 +198,8 @@ export interface DashboardStats {
 export interface DashboardFeedback {
   company_name: string;
   feedback_type: string;
+  content?: string;
+  metadata?: any;
   created_at: string;
   company_id?: string;
 }
@@ -204,10 +211,23 @@ export interface DashboardActivity {
   company_id?: string;
 }
 
+export interface SurveyOption {
+  id: number;
+  label: string;
+  score: number;
+}
+
+export interface SurveySettings {
+  title: string;
+  description: string;
+  options: SurveyOption[];
+}
+
 export interface DashboardData {
   stats: DashboardStats;
   recent_feedback: DashboardFeedback[];
   recent_activity: DashboardActivity[];
+  survey_settings: SurveySettings;
 }
 
 // ダッシュボードAPI

@@ -45,6 +45,8 @@ Route::prefix('public/companies/{companyId}')->group(function () {
 Route::prefix('companies/{companyId}/pdfs/{documentId}')->group(function () {
     Route::post('view-logs', [App\Http\Controllers\Api\DocumentController::class, 'logView']);
     Route::get('view-logs', [App\Http\Controllers\Api\DocumentController::class, 'getViewLogs']);
+    Route::post('feedback', [App\Http\Controllers\Api\DocumentController::class, 'submitFeedback']);
+    Route::get('feedback', [App\Http\Controllers\Api\DocumentController::class, 'getFeedback']);
 });
 
 // 認証が必要なルート
@@ -64,6 +66,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // 会社管理
     Route::apiResource('companies', App\Http\Controllers\Api\CompanyController::class);
+
+    // 会社のスコア詳細
+    Route::get('companies/{companyId}/score-details', [App\Http\Controllers\Api\CompanyController::class, 'getScoreDetails']);
 
     // PDF管理（管理画面用）
     Route::prefix('admin/companies/{companyId}/pdfs')->group(function () {
