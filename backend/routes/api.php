@@ -6,6 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\Api\DocumentController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\SettingsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -31,6 +32,9 @@ Route::get('/health', function () {
     ]);
 });
 
+// 公開設定（認証不要）
+Route::get('/settings/public', [SettingsController::class, 'publicSettings']);
+
 // 認証不要の公開APIルート
 Route::prefix('public/companies/{companyId}')->group(function () {
     Route::get('pdfs', [App\Http\Controllers\Admin\CompanyPdfController::class, 'publicIndex']);
@@ -53,6 +57,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ダッシュボード統計
     Route::get('/admin/dashboard/stats', [DashboardController::class, 'getStats']);
+
+    // 設定管理
+    Route::get('/settings', [SettingsController::class, 'index']);
+    Route::put('/settings', [SettingsController::class, 'update']);
 
     // 会社管理
     Route::apiResource('companies', App\Http\Controllers\Api\CompanyController::class);
