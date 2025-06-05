@@ -66,19 +66,20 @@
 - ストレージ管理
 - メタデータ管理
 
-### 3.3.3. 共有リンクモジュール
-- UUID生成
-- 有効期限管理
-- アクセス制御
+### 3.3.3. 共有リンクモジュール（廃止済み）
+- ~~UUID生成~~
+- ~~有効期限管理~~
+- ~~アクセス制御~~
+- **注記**: 会社UUIDベースのアクセス方式に変更
 
 ### 3.3.4. 閲覧トラッキングモジュール
 - ページビュー記録
 - 滞在時間計測
 - イベントログ
 
-### 3.3.5. アンケートモジュール
-- アンケート設定
-- 回答収集
+### 3.3.5. アンケートモジュール（仕様変更）
+- ~~ドキュメント個別のアンケート設定~~ → システム統一アンケート設定（app_settings）
+- 回答収集（document_feedbackテーブル使用）
 - 結果集計
 
 ### 3.3.6. TimeRex連携モジュール
@@ -99,32 +100,70 @@
 - POST /api/auth/forgot-password
 - POST /api/auth/reset-password
 
-### 3.4.2. 資料管理API
-- GET /api/documents
-- POST /api/documents
-- GET /api/documents/{id}
-- PUT /api/documents/{id}
-- DELETE /api/documents/{id}
-- POST /api/documents/{id}/share
-- GET /api/documents/{id}/stats
+### 3.4.2. 資料管理API（廃止済み、実装は別形式）
+~~旧設計:~~
+- ~~GET /api/documents~~
+- ~~POST /api/documents~~
+- ~~GET /api/documents/{id}~~
+- ~~PUT /api/documents/{id}~~
+- ~~DELETE /api/documents/{id}~~
+- ~~POST /api/documents/{id}/share~~ （廃止済み - 共有リンク生成）
+- ~~GET /api/documents/{id}/stats~~ （廃止済み - 統計情報取得）
 
-### 3.4.3. 閲覧トラッキングAPI
-- POST /api/tracking/view
-- POST /api/tracking/survey
-- GET /api/tracking/stats
+**実装形式 (CompanyPdfController):**
+- GET /api/admin/companies/{companyId}/pdfs - 資料一覧取得
+- POST /api/admin/companies/{companyId}/pdfs - 資料作成
+- GET /api/admin/companies/{companyId}/pdfs/{documentId} - 資料詳細取得
+- PUT /api/admin/companies/{companyId}/pdfs/{documentId} - 資料更新
+- DELETE /api/admin/companies/{companyId}/pdfs/{documentId} - 資料削除
+- GET /api/admin/companies/{companyId}/pdfs/{documentId}/preview - プレビューURL取得
+- GET /api/admin/companies/{companyId}/pdfs/{documentId}/download - ダウンロードURL取得
+
+### 3.4.3. 閲覧トラッキングAPI（DocumentControllerで実装済み）
+- POST /api/companies/{companyId}/pdfs/{documentId}/view-logs - 閲覧ログ記録
+- GET /api/companies/{companyId}/pdfs/{documentId}/view-logs - 閲覧ログ取得
+- POST /api/companies/{companyId}/pdfs/{documentId}/feedback - フィードバック送信
+- GET /api/companies/{companyId}/pdfs/{documentId}/feedback - フィードバック取得
+- GET /api/admin/companies/{companyId}/view-logs - 会社全体の閲覧ログ取得
+
+### 3.4.5. 設定管理API（実装で追加）
+- GET /api/settings - 設定取得
+- PUT /api/settings - 設定更新  
+- GET /api/settings/public - 公開設定取得（アンケート設定含む）
+
+### 3.4.6. フィードバックAPI（実装で追加）
+- POST /api/companies/{companyId}/pdfs/{documentId}/feedback - フィードバック送信
+- GET /api/companies/{companyId}/pdfs/{documentId}/feedback - フィードバック取得
 
 ### 3.4.4. TimeRex連携API
 - POST /api/timerex/webhook
 - GET /api/timerex/bookings
 - PUT /api/timerex/bookings/{id}
 
+### 3.4.7. ダッシュボードAPI（実装で追加）
+- GET /api/admin/dashboard/stats - ダッシュボード統計情報取得
+
+### 3.4.8. 会社管理API拡張（実装で追加）
+- GET /api/companies - 会社一覧取得
+- GET /api/companies/{id} - 会社詳細取得
+- POST /api/companies - 会社作成
+- PUT /api/companies/{id} - 会社更新
+- DELETE /api/companies/{id} - 会社削除
+- GET /api/companies/{companyId}/score-details - スコア詳細取得
+
+### 3.4.9. 公開API（実装で追加）
+- GET /api/public/companies/{companyId}/pdfs - 公開PDF一覧取得
+- GET /api/public/companies/{companyId}/pdfs/{documentId}/preview - 公開PDFプレビュー
+
 ## 3.5. データベーステーブル定義
-### 3.5.1. users
+### 3.5.1. users（拡張版）
 - id: uuid (PK)
 - company_id: uuid (FK)
 - name: string
 - email: string (unique)
 - password: string
+- company_name: string（所属会社名）
+- admin: boolean（管理者権限フラグ、デフォルト: false）
 - created_at: timestamp
 - updated_at: timestamp
 
@@ -142,45 +181,71 @@
 - created_at: timestamp
 - updated_at: timestamp
 
-### 3.5.4. document_shared_links
-- id: uuid (PK)
-- document_id: uuid (FK)
-- token: string (unique)
-- expires_at: timestamp
-- created_at: timestamp
-- updated_at: timestamp
+### 3.5.4. document_shared_links（廃止済み）
+- ~~id: uuid (PK)~~
+- ~~document_id: uuid (FK)~~
+- ~~token: string (unique)~~
+- ~~expires_at: timestamp~~
+- ~~created_at: timestamp~~
+- ~~updated_at: timestamp~~
+- **注記**: 設計変更により廃止。会社UUIDベースのアクセス方式を採用
 
 ### 3.5.5. document_views
 - id: uuid (PK)
 - document_id: uuid (FK)
-- shared_link_id: uuid (FK)
+- ~~shared_link_id: uuid (FK)~~ （廃止）
 - page_number: integer
 - view_duration: integer
 - created_at: timestamp
 
-### 3.5.6. document_surveys
-- id: uuid (PK)
-- document_id: uuid (FK)
-- question: string
-- options: json
-- created_at: timestamp
-- updated_at: timestamp
+### 3.5.6. document_surveys（仕様変更により廃止）
+- ~~id: uuid (PK)~~
+- ~~document_id: uuid (FK)~~
+- ~~question: string~~
+- ~~options: json~~
+- ~~created_at: timestamp~~
+- ~~updated_at: timestamp~~
+- **注記**: app_settingsテーブルでシステム統一アンケート設定を管理に変更
 
-### 3.5.7. document_survey_responses
-- id: uuid (PK)
-- survey_id: uuid (FK)
-- shared_link_id: uuid (FK)
-- answer: string
-- created_at: timestamp
+### 3.5.7. document_survey_responses（仕様変更により廃止）
+- ~~id: uuid (PK)~~
+- ~~survey_id: uuid (FK)~~
+- ~~shared_link_id: uuid (FK)~~ （廃止）
+- ~~answer: string~~
+- ~~created_at: timestamp~~
+- **注記**: document_feedbackテーブルでアンケート回答を管理に変更
 
 ### 3.5.8. timerex_bookings
 - id: uuid (PK)
 - document_id: uuid (FK)
-- shared_link_id: uuid (FK)
+- ~~shared_link_id: uuid (FK)~~ （廃止）
 - booking_id: string
 - status: string
 - created_at: timestamp
 - updated_at: timestamp
+
+### 3.5.9. app_settings（実装で追加）
+- id: bigint (PK)
+- key: string (unique)（設定キー）
+- value: json（設定値、JSON型による柔軟な格納）
+- description: string（設定の説明）
+- type: string（設定の種類、例: 'survey', 'scoring', 'system'）
+- is_public: boolean（公開設定フラグ、デフォルト: false）
+- created_at: timestamp
+- updated_at: timestamp
+- **注記**: システム全体の設定を動的に管理、特にアンケート設定の統一管理を実現
+
+### 3.5.10. document_feedback（実装で追加）
+- id: uuid (PK)
+- document_id: uuid (FK)
+- feedback_type: string
+- content: text (nullable)
+- feedbacker_ip: string
+- feedbacker_user_agent: string (nullable)
+- feedback_metadata: json (nullable)
+- created_at: timestamp
+- updated_at: timestamp
+- **注記**: アンケート回答とフィードバックを統合管理
 
 ## 3.6. バッチ処理・スケジュールジョブ
 ### 3.6.1. フォローアップメール送信ジョブ
@@ -193,7 +258,7 @@
 ### 3.6.2. データクリーンアップジョブ
 - 実行タイミング: 毎日
 - 処理内容:
-  1. 期限切れ共有リンクの削除
+  1. ~~期限切れ共有リンクの削除~~ （廃止済み機能）
   2. 古い閲覧ログのアーカイブ
   3. 一時ファイルの削除
 
