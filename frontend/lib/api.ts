@@ -49,6 +49,12 @@ export interface Company {
   feedback_count?: number;
   engagement_score?: number;
   survey_score?: number;
+  booking_status?: 'considering' | 'confirmed' | 'cancelled';
+  timerex_stats?: {
+    total_bookings: number;
+    total_cancellations: number;
+    recent_bookings: any[];
+  };
 }
 
 export interface PaginatedResponse<T> {
