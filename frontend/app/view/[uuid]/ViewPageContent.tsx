@@ -429,7 +429,16 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
         {showBookingOption && (
           <div className="fixed bottom-4 right-4 z-50">
             <Button
-              onClick={() => setShowBookingPrompt(true)}
+              onClick={() => {
+                if (companyData?.booking_link) {
+                  const bookingUrl = new URL(companyData.booking_link);
+                  bookingUrl.searchParams.set('company_id', uuid);
+                  bookingUrl.searchParams.set('guest_comment', uuid);
+                  window.location.href = bookingUrl.toString();
+                } else {
+                  setShowBookingPrompt(true);
+                }
+              }}
               className="shadow-lg gap-2"
               size="lg"
             >
@@ -452,8 +461,14 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
               <div className="py-4">
                 <div className="flex gap-3">
                   <Button onClick={() => {
-                    const bookingUrl = companyData?.booking_link || '/booking';
-                    window.location.href = bookingUrl;
+                    if (companyData?.booking_link) {
+                      const bookingUrl = new URL(companyData.booking_link);
+                      bookingUrl.searchParams.set('company_id', uuid);
+                      bookingUrl.searchParams.set('guest_comment', uuid);
+                      window.location.href = bookingUrl.toString();
+                    } else {
+                      window.location.href = '/booking';
+                    }
                   }} className="flex-1 gap-2">
                     <Calendar className="h-4 w-4" />
                     候補の日時を見る
