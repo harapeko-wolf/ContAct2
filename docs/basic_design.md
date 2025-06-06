@@ -2,14 +2,14 @@
 
 ## 2.1. システムアーキテクチャ
 ### 2.1.1. フロントエンド
-- フレームワーク: Next.js
+- フレームワーク: Next.js 15
 - 状態管理: React Context + SWR
 - UIライブラリ: Tailwind CSS
 - テスト: Jest + React Testing Library
 - ビルドツール: Vite
 
 ### 2.1.2. バックエンド
-- フレームワーク: Laravel
+- フレームワーク: Laravel 12
 - API: RESTful API
 - 認証: Laravel Sanctum
 - テスト: PHPUnit
