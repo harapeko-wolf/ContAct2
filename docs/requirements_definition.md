@@ -69,9 +69,9 @@
     *   *懸念事項*: TimeRex側で予約完了後の任意リダイレクトが不可の場合、Webhookへの依存度が高まる。
 
 ## 1.7. システム構成案（初期）
-*   フロントエンド: Next.js （既存）
-*   バックエンド: Laravel （既存）
-*   データベース: MySQL （既存）
+*   フロントエンド: Next.js 15 （既存）
+*   バックエンド: Laravel 12 （既存）
+*   データベース: MySQL 8.4 （既存）
 *   PDFストレージ: クラウドストレージ（AWS S3, Google Cloud Storage, Azure Blob Storage等）
 *   メール送信: 外部メール配信サービス（SendGrid, Amazon SES等）
 *   エラー監視: Sentry 
