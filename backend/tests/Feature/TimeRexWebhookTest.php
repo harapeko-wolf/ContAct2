@@ -106,7 +106,7 @@ class TimeRexWebhookTest extends TestCase
         $this->company->refresh();
         $bookings = $this->company->timerex_bookings;
 
-        $this->assertEquals(1, $bookings['total_bookings']);
+        $this->assertEquals(0, $bookings['total_bookings']); // confirmed → cancelled で total_bookings は減算される
         $this->assertEquals(1, $bookings['total_cancellations']);
 
         $booking = $bookings['bookings'][0];
