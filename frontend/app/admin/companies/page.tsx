@@ -66,7 +66,7 @@ const STATUS_MAP = {
 
 const REVERSE_STATUS_MAP = {
   '受注': 'active',
-  '予約検討中': 'considering',
+  '検討中': 'considering',
   '失注': 'inactive',
 } as const;
 
