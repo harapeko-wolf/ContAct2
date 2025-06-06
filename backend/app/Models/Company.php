@@ -89,6 +89,9 @@ class Company extends Model
             ->firstWhere('event_id', $bookingData['event_id']);
 
         if ($existingBooking) {
+            $previousStatus = $existingBooking['status'] ?? null;
+            $newStatus = $bookingData['status'];
+
             // 既存予約のステータス更新
             $currentBookings['bookings'] = collect($currentBookings['bookings'])
                 ->map(function ($booking) use ($bookingData) {
@@ -99,9 +102,26 @@ class Company extends Model
                 })
                 ->all();
 
-            // キャンセルの場合はカウンター更新
-            if ($bookingData['status'] === 'cancelled') {
-                $currentBookings['total_cancellations']++;
+            // ステータス変更に応じてカウンター更新
+            if ($previousStatus !== $newStatus) {
+                // confirmed → cancelled の場合
+                if ($previousStatus === 'confirmed' && $newStatus === 'cancelled') {
+                    $currentBookings['total_bookings']--;
+                    $currentBookings['total_cancellations']++;
+                }
+                // cancelled → confirmed の場合（再予約など）
+                elseif ($previousStatus === 'cancelled' && $newStatus === 'confirmed') {
+                    $currentBookings['total_bookings']++;
+                    $currentBookings['total_cancellations']--;
+                }
+                // 初回ステータスが cancelled の場合（previousStatus が null など）
+                elseif ($previousStatus === null && $newStatus === 'cancelled') {
+                    $currentBookings['total_cancellations']++;
+                }
+                // 初回ステータスが confirmed の場合（previousStatus が null など）
+                elseif ($previousStatus === null && $newStatus === 'confirmed') {
+                    $currentBookings['total_bookings']++;
+                }
             }
         } else {
             // 新規予約追加
@@ -109,6 +129,8 @@ class Company extends Model
 
             if ($bookingData['status'] === 'confirmed') {
                 $currentBookings['total_bookings']++;
+            } elseif ($bookingData['status'] === 'cancelled') {
+                $currentBookings['total_cancellations']++;
             }
         }
 
