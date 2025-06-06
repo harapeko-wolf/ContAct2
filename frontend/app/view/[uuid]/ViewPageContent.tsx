@@ -431,10 +431,19 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
             <Button
               onClick={() => {
                 if (companyData?.booking_link) {
-                  const bookingUrl = new URL(companyData.booking_link);
-                  bookingUrl.searchParams.set('company_id', uuid);
-                  bookingUrl.searchParams.set('guest_comment', uuid);
-                  window.location.href = bookingUrl.toString();
+                  try {
+                    const bookingUrl = new URL(companyData.booking_link);
+                    bookingUrl.searchParams.set('company_id', uuid);
+                    bookingUrl.searchParams.set('guest_comment', uuid);
+                    window.location.href = bookingUrl.toString();
+                  } catch (error) {
+                    console.error('Invalid booking URL:', companyData.booking_link, error);
+                    toast({
+                      title: '予約URLエラー',
+                      description: '予約URLが正しくありません。管理者にお問い合わせください。',
+                      variant: 'destructive',
+                    });
+                  }
                 } else {
                   setShowBookingPrompt(true);
                 }
@@ -462,10 +471,19 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
                 <div className="flex gap-3">
                   <Button onClick={() => {
                     if (companyData?.booking_link) {
-                      const bookingUrl = new URL(companyData.booking_link);
-                      bookingUrl.searchParams.set('company_id', uuid);
-                      bookingUrl.searchParams.set('guest_comment', uuid);
-                      window.location.href = bookingUrl.toString();
+                      try {
+                        const bookingUrl = new URL(companyData.booking_link);
+                        bookingUrl.searchParams.set('company_id', uuid);
+                        bookingUrl.searchParams.set('guest_comment', uuid);
+                        window.location.href = bookingUrl.toString();
+                      } catch (error) {
+                        console.error('Invalid booking URL:', companyData.booking_link, error);
+                        toast({
+                          title: '予約URLエラー',
+                          description: '予約URLが正しくありません。管理者にお問い合わせください。',
+                          variant: 'destructive',
+                        });
+                      }
                     } else {
                       window.location.href = '/booking';
                     }
