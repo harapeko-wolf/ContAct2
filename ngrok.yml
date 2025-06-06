@@ -1,0 +1,12 @@
+version: "2"
+authtoken_from_env: true
+tunnels:
+  backend:
+    addr: nginx:80
+    proto: http
+    inspect: false
+  frontend:
+    addr: frontend:3000
+    proto: http
+    inspect: false
+web_addr: 0.0.0.0:4040 
