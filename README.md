@@ -156,8 +156,8 @@ docker compose exec frontend npm run type-check
 
 ## コンテナ情報
 
-- フロントエンド: Next.js (ポート3000)
-- バックエンド: Laravel (ポート80)
+- フロントエンド: Next.js 15 (ポート3000)
+- バックエンド: Laravel 12 (ポート80)
 - データベース: MySQL 8.4 (ポート3306)
 - phpMyAdmin: (ポート8080)
 - Nginx: (ポート80)

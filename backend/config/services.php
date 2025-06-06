@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'timerex' => [
+        'webhook_token' => env('TIMEREX_WEBHOOK_TOKEN'),
+    ],
+
 ];
