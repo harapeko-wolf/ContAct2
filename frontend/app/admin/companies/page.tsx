@@ -55,18 +55,18 @@ import {
 } from "@/components/ui/select";
 
 // ステータスの定義
-const STATUS_OPTIONS = ['すべて', '受注', '検討中', '失注'] as const;
+const STATUS_OPTIONS = ['すべて', '受注', '営業中', '失注'] as const;
 type StatusType = typeof STATUS_OPTIONS[number];
 
 const STATUS_MAP = {
   'active': '受注',
-  'considering': '検討中',
+  'considering': '営業中',
   'inactive': '失注',
 } as const;
 
 const REVERSE_STATUS_MAP = {
   '受注': 'active',
-  '検討中': 'considering',
+  '営業中': 'considering',
   '失注': 'inactive',
 } as const;
 
@@ -326,7 +326,7 @@ export default function CompaniesPage() {
                   className={cn(
                     "min-w-[80px]",
                     status === '受注' && selectedStatus === status && "bg-green-600",
-                    status === '検討中' && selectedStatus === status && "bg-blue-600",
+                    status === '営業中' && selectedStatus === status && "bg-blue-600",
                     status === '失注' && selectedStatus === status && "bg-red-600"
                   )}
                 >
