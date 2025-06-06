@@ -67,6 +67,8 @@ class CompanyController extends Controller
                     'feedback_count' => $scores['feedback_count'],
                     'engagement_score' => $scores['engagement_score'],
                     'survey_score' => $scores['survey_score'],
+                    'booking_status' => $this->getBookingStatus($company),
+                    'timerex_stats' => $company->timeRexStats,
                 ];
             });
 
@@ -104,6 +106,37 @@ class CompanyController extends Controller
                     'details' => $e->getMessage()
                 ]
             ], 500);
+        }
+    }
+
+    /**
+     * TimeRex予約ステータスを判定
+     */
+    private function getBookingStatus($company)
+    {
+        $bookings = $company->timerex_bookings;
+
+        if (!$bookings || empty($bookings['bookings'])) {
+            return 'considering'; // 検討中（予約なし）
+        }
+
+        // 最新の予約を取得
+        $latestBooking = collect($bookings['bookings'])
+            ->sortByDesc('created_at')
+            ->first();
+
+        if (!$latestBooking) {
+            return 'considering';
+        }
+
+        // ステータスに基づいて判定
+        switch ($latestBooking['status']) {
+            case 'confirmed':
+                return 'confirmed'; // 予約確定
+            case 'cancelled':
+                return 'cancelled'; // 予約キャンセル
+            default:
+                return 'considering'; // 予約検討中
         }
     }
 

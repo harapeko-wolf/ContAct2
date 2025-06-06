@@ -7,6 +7,7 @@ use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\Api\DocumentController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\SettingsController;
+use App\Http\Controllers\Api\TimeRexWebhookController;
 
 /*
 |--------------------------------------------------------------------------
@@ -30,6 +31,12 @@ Route::get('/health', function () {
         'message' => 'API is running',
         'timestamp' => now()
     ]);
+});
+
+// TimeRex Webhook（特別な認証ミドルウェア使用）
+Route::prefix('timerex')->middleware(\App\Http\Middleware\TimeRexWebhookAuth::class)->group(function () {
+    Route::post('/webhook', [TimeRexWebhookController::class, 'webhook']);
+    Route::get('/webhook/health', [TimeRexWebhookController::class, 'health']);
 });
 
 // 公開設定（認証不要）

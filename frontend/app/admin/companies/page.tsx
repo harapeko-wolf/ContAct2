@@ -66,7 +66,7 @@ const STATUS_MAP = {
 
 const REVERSE_STATUS_MAP = {
   '受注': 'active',
-  '検討中': 'considering',
+  '予約検討中': 'considering',
   '失注': 'inactive',
 } as const;
 
@@ -160,6 +160,31 @@ export default function CompaniesPage() {
     if (score >= 40) return 'text-yellow-600 bg-yellow-50';
     if (score >= 20) return 'text-orange-600 bg-orange-50';
     return 'text-red-600 bg-red-50';
+  };
+
+  const getBookingStatusBadge = (company: Company) => {
+    const bookingStatus = company.booking_status || 'considering';
+    
+    switch (bookingStatus) {
+      case 'confirmed':
+        return (
+          <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800">
+            予約確定
+          </span>
+        );
+      case 'cancelled':
+        return (
+          <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-800">
+            予約キャンセル
+          </span>
+        );
+      default:
+        return (
+          <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-orange-100 text-orange-800">
+            予約検討中
+          </span>
+        );
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -342,7 +367,7 @@ export default function CompaniesPage() {
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <span className={cn(
                         "px-2 py-0.5 text-xs font-medium rounded-full",
                         company.status === 'active' && "bg-green-100 text-green-700",
@@ -351,6 +376,9 @@ export default function CompaniesPage() {
                       )}>
                         {STATUS_MAP[company.status]}
                       </span>
+
+                      {/* TimeRex予約ステータス */}
+                      {getBookingStatusBadge(company)}
                       
                       {/* スコア表示 */}
                       {company.average_score !== undefined && company.average_score > 0 && (
