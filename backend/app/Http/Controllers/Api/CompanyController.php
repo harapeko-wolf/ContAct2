@@ -117,7 +117,7 @@ class CompanyController extends Controller
         $bookings = $company->timerex_bookings;
 
         if (!$bookings || empty($bookings['bookings'])) {
-            return 'considering'; // 検討中（予約なし）
+            return 'considering'; // 予約検討中（予約なし）
         }
 
         // 最新の予約を取得

@@ -464,7 +464,7 @@ export default function CompaniesPage() {
                                 company.status === 'considering' && "bg-blue-50"
                               )}
                             >
-                              検討中
+                              営業中
                             </DropdownMenuItem>
                             <DropdownMenuItem 
                               onClick={() => setStatusChangeDialog({
