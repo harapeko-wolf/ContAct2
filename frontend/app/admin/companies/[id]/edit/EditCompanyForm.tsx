@@ -272,7 +272,7 @@ export default function EditCompanyForm({ companyId }: { companyId: string }) {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="active">受注</SelectItem>
-                        <SelectItem value="considering">検討中</SelectItem>
+                        <SelectItem value="considering">営業中</SelectItem>
                         <SelectItem value="inactive">失注</SelectItem>
                       </SelectContent>
                     </Select>

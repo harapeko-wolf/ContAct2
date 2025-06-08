@@ -75,7 +75,7 @@ describe('CreateCompanyPage', () => {
     const allButtons = screen.getAllByRole('button')
     const statusTrigger = allButtons.find(btn => {
       const txt = btn.textContent || ''
-      return txt.includes('ステータス') || txt.includes('受注') || txt.includes('検討中') || txt.includes('失注') || btn.getAttribute('data-state') === 'closed' || (btn.className && btn.className.includes('select'))
+      return txt.includes('ステータス') || txt.includes('受注') || txt.includes('営業中') || txt.includes('失注') || btn.getAttribute('data-state') === 'closed' || (btn.className && btn.className.includes('select'))
     })
     expect(statusTrigger).toBeTruthy()
     await act(async () => {
