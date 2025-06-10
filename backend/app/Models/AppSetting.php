@@ -34,10 +34,10 @@ class AppSetting extends Model
     {
         if (!isset(self::$cache[$key])) {
             $setting = self::where('key', $key)->first();
-            self::$cache[$key] = $setting ? $setting->value : $default;
+            self::$cache[$key] = $setting ? $setting->value : null;
         }
         
-        return self::$cache[$key];
+        return self::$cache[$key] ?? $default;
     }
 
     /**
