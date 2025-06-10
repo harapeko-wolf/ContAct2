@@ -326,6 +326,11 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
       console.log('フォローアップタイマーを開始しました');
     } catch (error) {
       console.error('フォローアップタイマー開始に失敗:', error);
+      toast({
+        title: 'フォローアップ機能エラー',
+        description: 'フォローアップメール機能の開始に失敗しました。システム管理者にお問い合わせください。',
+        variant: 'destructive',
+      });
     }
     
     if (showBookingOption) {
@@ -450,6 +455,11 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
                     console.log('フォローアップタイマーを停止しました（固定ボタンからTimeRex予約）');
                   } catch (error) {
                     console.error('フォローアップタイマー停止に失敗:', error);
+                    toast({
+                      title: 'フォローアップ機能エラー',
+                      description: 'フォローアップタイマーの停止に失敗しました。予約は継続されます。',
+                      variant: 'destructive',
+                    });
                   }
                 }
                 
@@ -502,6 +512,11 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
                         console.log('フォローアップタイマーを停止しました（TimeRex予約）');
                       } catch (error) {
                         console.error('フォローアップタイマー停止に失敗:', error);
+                        toast({
+                          title: 'フォローアップ機能エラー',
+                          description: 'フォローアップタイマーの停止に失敗しました。予約は継続されます。',
+                          variant: 'destructive',
+                        });
                       }
                     }
                     
@@ -536,6 +551,11 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
                         console.log('フォローアップタイマーをリセットしました（後で検討）');
                       } catch (error) {
                         console.error('フォローアップタイマーリセットに失敗:', error);
+                        toast({
+                          title: 'フォローアップ機能エラー',
+                          description: 'フォローアップタイマーのリセットに失敗しました。システム管理者にお問い合わせください。',
+                          variant: 'destructive',
+                        });
                       }
                     }
                     setShowBookingPrompt(false);
