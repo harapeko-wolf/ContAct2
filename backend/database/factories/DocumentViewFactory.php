@@ -26,7 +26,6 @@ class DocumentViewFactory extends Factory
     public function definition(): array
     {
         return [
-            'id' => $this->faker->uuid(),
             'document_id' => Document::factory(),
             'viewer_ip' => $this->faker->ipv4(),
             'page_number' => $this->faker->numberBetween(1, 20),
