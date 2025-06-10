@@ -23,19 +23,31 @@ class AppSetting extends Model
     ];
 
     /**
-     * 設定値を取得
+     * リクエスト中のキャッシュ（staticで共有）
+     */
+    private static $cache = [];
+
+    /**
+     * 設定値を取得（キャッシュ付き）
      */
     public static function get(string $key, $default = null)
     {
-        $setting = self::where('key', $key)->first();
-        return $setting ? $setting->value : $default;
+        if (!isset(self::$cache[$key])) {
+            $setting = self::where('key', $key)->first();
+            self::$cache[$key] = $setting ? $setting->value : $default;
+        }
+        
+        return self::$cache[$key];
     }
 
     /**
      * 設定値を保存
      */
-    public static function set(string $key, $value, string $description = null, string $type = 'string', bool $is_public = false)
+    public static function set(string $key, $value, ?string $description = null, string $type = 'string', bool $is_public = false)
     {
+        // キャッシュをクリア
+        self::clearCache($key);
+        
         return self::updateOrCreate(
             ['key' => $key],
             [
@@ -48,15 +60,54 @@ class AppSetting extends Model
     }
 
     /**
-     * 複数の設定を一括で取得
+     * キャッシュをクリア
+     */
+    public static function clearCache(?string $key = null)
+    {
+        if ($key === null) {
+            // 全キャッシュクリア
+            self::$cache = [];
+        } else {
+            // 特定キーのみクリア
+            unset(self::$cache[$key]);
+        }
+    }
+
+    /**
+     * 複数の設定を一括で取得（最適化版）
      */
     public static function getMultiple(array $keys, $default = [])
     {
-        $settings = [];
+        // 未キャッシュのキーを特定
+        $uncachedKeys = [];
         foreach ($keys as $key) {
-            $settings[$key] = self::get($key, $default[$key] ?? null);
+            if (!isset(self::$cache[$key])) {
+                $uncachedKeys[] = $key;
+            }
         }
-        return $settings;
+        
+        // 未キャッシュのキーを一括取得
+        if (!empty($uncachedKeys)) {
+            $settings = self::whereIn('key', $uncachedKeys)->get();
+            foreach ($settings as $setting) {
+                self::$cache[$setting->key] = $setting->value;
+            }
+            
+            // 見つからなかったキーはnullでキャッシュ
+            foreach ($uncachedKeys as $key) {
+                if (!isset(self::$cache[$key])) {
+                    self::$cache[$key] = null;
+                }
+            }
+        }
+        
+        // 結果を組み立て
+        $result = [];
+        foreach ($keys as $key) {
+            $result[$key] = self::$cache[$key] ?? ($default[$key] ?? null);
+        }
+        
+        return $result;
     }
 
     /**
