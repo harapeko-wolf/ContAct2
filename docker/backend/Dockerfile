@@ -9,7 +9,9 @@ RUN apt-get update && apt-get install -y \
     libxml2-dev \
     zip \
     unzip \
-    nginx
+    nginx \
+    cron \
+    && rm -rf /var/lib/apt/lists/*
 
 # PHPの拡張機能をインストール
 RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
@@ -36,6 +38,7 @@ RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cac
 
 # 起動スクリプトの作成
 COPY docker/backend/start.sh /usr/local/bin/start.sh
-RUN chmod +x /usr/local/bin/start.sh
+COPY docker/backend/start-cron.sh /usr/local/bin/start-cron.sh
+RUN chmod +x /usr/local/bin/start.sh /usr/local/bin/start-cron.sh
 
 CMD ["/usr/local/bin/start.sh"] 
