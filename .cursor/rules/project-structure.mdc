@@ -5,7 +5,7 @@ alwaysApply: true
 ---
 # プロジェクト構造ガイド
 
-## フロントエンド (Next.js)
+## フロントエンド (Next.js 15)
 - メインページ: [page.tsx](mdc:frontend/app/page.tsx)
 - レイアウト: [layout.tsx](mdc:frontend/app/layout.tsx)
 - スタイル: [globals.css](mdc:frontend/app/globals.css)
@@ -14,7 +14,7 @@ alwaysApply: true
 - `/view`: ドキュメント閲覧機能
 - `/admin`: 管理画面機能
 
-## バックエンド (Laravel)
+## バックエンド (Laravel 12)
 - マイグレーション: [database/migrations](mdc:backend/database/migrations)
 - シーダー: [database/seeders](mdc:backend/database/seeders)
 
