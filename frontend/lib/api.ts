@@ -198,9 +198,22 @@ export const pdfApi = {
     viewer_ip?: string;
     triggered_at?: string;
   }) => {
-    // viewer_ipが指定されていない場合は、簡易的にClientのIPを取得
+    // viewer_ipが指定されていない場合は、外部サービスで実際のIPを取得
+    let clientIp = data.viewer_ip;
+    if (!clientIp) {
+      try {
+        const ipResponse = await fetch('https://api.ipify.org?format=json');
+        const ipData = await ipResponse.json();
+        clientIp = ipData.ip;
+      } catch (error) {
+        console.warn('IP取得に失敗、UUIDを使用:', error);
+        // IPが取得できない場合は、一意の識別子を生成
+        clientIp = crypto.randomUUID();
+      }
+    }
+    
     const requestData = {
-      viewer_ip: data.viewer_ip || '127.0.0.1', // フォールバック値
+      viewer_ip: clientIp,
       triggered_at: data.triggered_at || new Date().toISOString(),
     };
     
@@ -229,8 +242,22 @@ export const pdfApi = {
     viewer_ip?: string;
     reason: 'user_dismissed' | 'timerex_booked';
   }) => {
+    // viewer_ipが指定されていない場合は、外部サービスで実際のIPを取得
+    let clientIp = data.viewer_ip;
+    if (!clientIp) {
+      try {
+        const ipResponse = await fetch('https://api.ipify.org?format=json');
+        const ipData = await ipResponse.json();
+        clientIp = ipData.ip;
+      } catch (error) {
+        console.warn('IP取得に失敗、UUIDを使用:', error);
+        // IPが取得できない場合は、一意の識別子を生成
+        clientIp = crypto.randomUUID();
+      }
+    }
+    
     const requestData = {
-      viewer_ip: data.viewer_ip || '127.0.0.1', // フォールバック値
+      viewer_ip: clientIp,
       reason: data.reason,
     };
     
