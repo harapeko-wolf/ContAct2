@@ -38,6 +38,7 @@ class SettingsController extends Controller
                 $settings['general'] = $this->getGeneralSettings();
                 $settings['survey'] = $this->getSurveySettings();
                 $settings['scoring'] = $this->getScoringSettings();
+                $settings['followupEmail'] = $this->getFollowupEmailSettings();
             }
 
             return response()->json([
@@ -94,6 +95,11 @@ class SettingsController extends Controller
                 'scoring.tiers' => 'sometimes|array|min:1',
                 'scoring.tiers.*.timeThreshold' => 'required_with:scoring.tiers|integer|min:0',
                 'scoring.tiers.*.points' => 'required_with:scoring.tiers|integer|min:0',
+
+                'followupEmail' => 'sometimes|array',
+                'followupEmail.enabled' => 'sometimes|boolean',
+                'followupEmail.delayMinutes' => 'sometimes|integer|min:1|max:1440',
+                'followupEmail.subject' => 'sometimes|string|max:255',
 
                 'account' => 'sometimes|array',
                 'account.fullName' => 'sometimes|string|max:255',
@@ -156,9 +162,15 @@ class SettingsController extends Controller
                     $this->updateScoringSettings($request->input('scoring'));
                     $updated['scoring'] = true;
                 }
+
+                // フォローアップメール設定の更新
+                if ($request->has('followupEmail')) {
+                    $this->updateFollowupEmailSettings($request->input('followupEmail'));
+                    $updated['followupEmail'] = true;
+                }
             } else {
                 // 一般ユーザーがシステム設定を変更しようとした場合はエラー
-                if ($request->has('general') || $request->has('survey') || $request->has('scoring')) {
+                if ($request->has('general') || $request->has('survey') || $request->has('scoring') || $request->has('followupEmail')) {
                     return response()->json([
                         'error' => [
                             'code' => 'FORBIDDEN',
@@ -289,6 +301,18 @@ class SettingsController extends Controller
     }
 
     /**
+     * フォローアップメール設定を取得
+     */
+    private function getFollowupEmailSettings()
+    {
+        return [
+            'enabled' => AppSetting::get('email.followup_enabled', true),
+            'delayMinutes' => AppSetting::get('email.followup_delay_minutes', 15),
+            'subject' => AppSetting::get('email.followup_subject', '資料のご確認ありがとうございました - さらに詳しくご説明いたします'),
+        ];
+    }
+
+    /**
      * アカウント設定を取得
      */
     private function getAccountSettings()
@@ -365,6 +389,22 @@ class SettingsController extends Controller
         }
         if (isset($scoring['tiers'])) {
             AppSetting::set('scoring.tiers', $scoring['tiers'], 'スコアリング層', 'array');
+        }
+    }
+
+    /**
+     * フォローアップメール設定を更新
+     */
+    private function updateFollowupEmailSettings($followupEmail)
+    {
+        if (isset($followupEmail['enabled'])) {
+            AppSetting::set('email.followup_enabled', $followupEmail['enabled'], 'フォローアップメール機能の有効/無効', 'boolean');
+        }
+        if (isset($followupEmail['delayMinutes'])) {
+            AppSetting::set('email.followup_delay_minutes', $followupEmail['delayMinutes'], 'フォローアップメール送信までの遅延時間（分）', 'number');
+        }
+        if (isset($followupEmail['subject'])) {
+            AppSetting::set('email.followup_subject', $followupEmail['subject'], 'フォローアップメールの件名', 'string');
         }
     }
 

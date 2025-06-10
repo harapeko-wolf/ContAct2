@@ -45,9 +45,16 @@ class CompanyController extends Controller
             // ページネーション実行
             $companies = $query->paginate($perPage, ['*'], 'page', $page);
 
-            // 各会社の詳細スコア計算
-            $data = $companies->getCollection()->map(function ($company) {
-                $scores = $this->calculateCompanyScore($company->id);
+            // 会社IDsを取得
+            $companyIds = $companies->getCollection()->pluck('id')->toArray();
+
+            // 全会社のフィードバックとビューを一括取得（N+1問題回避）
+            $feedbacksData = $this->getFeedbacksDataBatch($companyIds);
+            $viewsData = $this->getViewsDataBatch($companyIds);
+
+            // 各会社の詳細スコア計算（事前取得したデータを使用）
+            $data = $companies->getCollection()->map(function ($company) use ($feedbacksData, $viewsData) {
+                $scores = $this->calculateCompanyScoreBatch($company->id, $feedbacksData, $viewsData);
 
                 return [
                     'id' => $company->id,
@@ -107,6 +114,177 @@ class CompanyController extends Controller
                 ]
             ], 500);
         }
+    }
+
+    /**
+     * 全会社のフィードバックデータを一括取得（N+1問題回避）
+     */
+    private function getFeedbacksDataBatch(array $companyIds)
+    {
+        if (empty($companyIds)) {
+            return [];
+        }
+
+        return DocumentFeedback::select('document_feedback.feedback_metadata', 'documents.company_id')
+            ->join('documents', 'document_feedback.document_id', '=', 'documents.id')
+            ->whereIn('documents.company_id', $companyIds)
+            ->get()
+            ->groupBy('company_id')
+            ->toArray();
+    }
+
+    /**
+     * 全会社のビューデータを一括取得（N+1問題回避）
+     */
+    private function getViewsDataBatch(array $companyIds)
+    {
+        if (empty($companyIds)) {
+            return [];
+        }
+
+        $settings = $this->getScoringSettings();
+
+        return DocumentView::select([
+                'document_views.page_number',
+                'document_views.view_duration',
+                'document_views.viewed_at',
+                'documents.id as document_id',
+                'documents.company_id'
+            ])
+            ->join('documents', 'document_views.document_id', '=', 'documents.id')
+            ->whereIn('documents.company_id', $companyIds)
+            ->where('document_views.view_duration', '>=', $settings['timeThreshold'])
+            ->get()
+            ->groupBy('company_id')
+            ->toArray();
+    }
+
+    /**
+     * 一括取得したデータを使用してスコア計算（N+1問題回避版）
+     */
+    private function calculateCompanyScoreBatch($companyId, $feedbacksData, $viewsData)
+    {
+        try {
+            // 1. アンケートフィードバックスコア計算
+            $surveyScore = $this->calculateSurveyScoreBatch($companyId, $feedbacksData);
+
+            // 2. PDF閲覧エンゲージメントスコア計算
+            $engagementScore = $this->calculateEngagementScoreBatch($companyId, $viewsData);
+
+            // 3. 総合スコア計算
+            $totalScore = 0;
+
+            // アンケートスコアがある場合はそれをベースとして使用
+            if ($surveyScore['average'] > 0) {
+                $totalScore = $surveyScore['average'];
+
+                // エンゲージメントスコアがある場合は加算（上限100点）
+                if ($engagementScore['total'] > 0) {
+                    $totalScore = min(100, $totalScore + $engagementScore['total']);
+                }
+            } else {
+                // アンケートスコアがない場合はエンゲージメントスコアのみ
+                $totalScore = $engagementScore['total'];
+            }
+
+            return [
+                'total_score' => round($totalScore, 1),
+                'survey_score' => $surveyScore['average'],
+                'engagement_score' => $engagementScore['total'],
+                'feedback_count' => $surveyScore['count'],
+                'view_count' => $engagementScore['view_count'],
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('スコア計算エラー: ' . $e->getMessage(), ['company_id' => $companyId]);
+            return [
+                'total_score' => 0,
+                'survey_score' => 0,
+                'engagement_score' => 0,
+                'feedback_count' => 0,
+                'view_count' => 0,
+            ];
+        }
+    }
+
+    /**
+     * アンケートフィードバックスコア計算（バッチ版）
+     */
+    private function calculateSurveyScoreBatch($companyId, $feedbacksData)
+    {
+        $companyFeedbacks = $feedbacksData[$companyId] ?? [];
+
+        $scores = [];
+        foreach ($companyFeedbacks as $feedback) {
+            $metadata = $feedback['feedback_metadata'] ?? [];
+            $score = null;
+
+            if (isset($metadata['selected_option']['score'])) {
+                $score = intval($metadata['selected_option']['score']);
+            } elseif (isset($metadata['interest_level'])) {
+                $score = intval($metadata['interest_level']);
+            }
+
+            if ($score !== null) {
+                $scores[] = $score;
+            }
+        }
+
+        return [
+            'average' => count($scores) > 0 ? round(array_sum($scores) / count($scores), 1) : 0,
+            'count' => count($scores),
+            'total_responses' => count($companyFeedbacks),
+        ];
+    }
+
+    /**
+     * PDF閲覧エンゲージメントスコア計算（バッチ版）
+     */
+    private function calculateEngagementScoreBatch($companyId, $viewsData)
+    {
+        $settings = $this->getScoringSettings();
+        $companyViews = $viewsData[$companyId] ?? [];
+
+        $totalScore = 0;
+        $viewCount = count($companyViews);
+        $completedDocuments = [];
+
+        // ドキュメントごとの最大ページ数を事前計算
+        $documentMaxPages = [];
+        $documentViewedMaxPages = [];
+
+        foreach ($companyViews as $view) {
+            $documentId = $view['document_id'];
+            
+            // 各ドキュメントの最大ページ数と閲覧ページ数を記録
+            if (!isset($documentMaxPages[$documentId])) {
+                $documentMaxPages[$documentId] = 0;
+                $documentViewedMaxPages[$documentId] = 0;
+            }
+            
+            $documentMaxPages[$documentId] = max($documentMaxPages[$documentId], $view['page_number']);
+            $documentViewedMaxPages[$documentId] = max($documentViewedMaxPages[$documentId], $view['page_number']);
+
+            // 時間ベースのスコア計算
+            $timeScore = $this->calculateTimeBasedScore($view['view_duration'], $settings['tiers']);
+            $totalScore += $timeScore;
+        }
+
+        // 完了ボーナスの判定
+        foreach ($documentMaxPages as $documentId => $maxPage) {
+            $viewedMaxPage = $documentViewedMaxPages[$documentId] ?? 0;
+            
+            if ($maxPage && $viewedMaxPage && $viewedMaxPage >= $maxPage) {
+                $totalScore += $settings['completionBonus'];
+                $completedDocuments[] = $documentId;
+            }
+        }
+
+        return [
+            'total' => round($totalScore, 1),
+            'view_count' => $viewCount,
+            'completed_documents' => count($completedDocuments),
+        ];
     }
 
     /**
@@ -222,7 +400,7 @@ class CompanyController extends Controller
     }
 
     /**
-     * PDF閲覧エンゲージメントスコア計算
+     * PDF閲覧エンゲージメントスコア計算（N+1問題修正版）
      */
     private function calculateEngagementScore($companyId)
     {
@@ -245,6 +423,32 @@ class CompanyController extends Controller
         $viewCount = $views->count();
         $completedDocuments = [];
 
+        // ドキュメントごとの最大ページ数を事前に一括取得（N+1問題回避）
+        $documentIds = $views->pluck('document_id')->unique()->toArray();
+        $documentMaxPages = [];
+        $documentViewedMaxPages = [];
+
+        if (!empty($documentIds)) {
+            // 全ドキュメントの最大ページ数を一括取得
+            $maxPages = DocumentView::selectRaw('document_id, MAX(page_number) as max_page')
+                ->whereIn('document_id', $documentIds)
+                ->groupBy('document_id')
+                ->pluck('max_page', 'document_id')
+                ->toArray();
+
+            // 会社別の閲覧最大ページ数を一括取得
+            $viewedMaxPages = DocumentView::selectRaw('document_views.document_id, MAX(document_views.page_number) as viewed_max_page')
+                ->join('documents', 'document_views.document_id', '=', 'documents.id')
+                ->where('documents.company_id', $companyId)
+                ->whereIn('document_views.document_id', $documentIds)
+                ->groupBy('document_views.document_id')
+                ->pluck('viewed_max_page', 'document_id')
+                ->toArray();
+
+            $documentMaxPages = $maxPages;
+            $documentViewedMaxPages = $viewedMaxPages;
+        }
+
         foreach ($views as $view) {
             // 時間ベースのスコア計算
             $timeScore = $this->calculateTimeBasedScore($view->view_duration, $settings['tiers']);
@@ -252,13 +456,8 @@ class CompanyController extends Controller
 
             // 完了ボーナスの判定（ドキュメントの最後のページまで閲覧）
             if (!in_array($view->document_id, $completedDocuments)) {
-                $maxPage = DocumentView::where('document_id', $view->document_id)
-                    ->max('page_number');
-
-                $viewedMaxPage = DocumentView::where('document_id', $view->document_id)
-                    ->join('documents', 'document_views.document_id', '=', 'documents.id')
-                    ->where('documents.company_id', $companyId)
-                    ->max('document_views.page_number');
+                $maxPage = $documentMaxPages[$view->document_id] ?? 0;
+                $viewedMaxPage = $documentViewedMaxPages[$view->document_id] ?? 0;
 
                 if ($maxPage && $viewedMaxPage && $viewedMaxPage >= $maxPage) {
                     $totalScore += $settings['completionBonus'];
