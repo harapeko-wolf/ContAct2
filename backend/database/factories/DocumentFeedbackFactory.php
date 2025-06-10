@@ -26,7 +26,6 @@ class DocumentFeedbackFactory extends Factory
     public function definition(): array
     {
         return [
-            'id' => $this->faker->uuid(),
             'document_id' => Document::factory(),
             'feedback_type' => $this->faker->randomElement(['survey', 'comment', 'rating']),
             'content' => $this->faker->optional()->sentence(),
