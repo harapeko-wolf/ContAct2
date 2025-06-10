@@ -44,6 +44,12 @@ interface ScoringSettings {
   tiers: ScoringTier[];
 }
 
+interface FollowupEmailSettings {
+  enabled: boolean;
+  delayMinutes: number;
+  subject: string;
+}
+
 interface AccountSettings {
   fullName: string;
   email: string;
@@ -57,6 +63,7 @@ interface AppSettings {
   general?: GeneralSettings;
   survey?: SurveySettings;
   scoring?: ScoringSettings;
+  followupEmail?: FollowupEmailSettings;
   account: AccountSettings;
 }
 
@@ -91,6 +98,11 @@ export default function SettingsPage() {
       timeThreshold: 5,
       completionBonus: 20,
       tiers: [],
+    },
+    followupEmail: {
+      enabled: true,
+      delayMinutes: 15,
+      subject: '資料のご確認ありがとうございました - さらに詳しくご説明いたします',
     },
     account: {
       fullName: '',
@@ -184,6 +196,12 @@ export default function SettingsPage() {
               { timeThreshold: 30, points: 3 },
               { timeThreshold: 60, points: 5 },
             ],
+          };
+          
+          settingsWithDefaults.followupEmail = {
+            enabled: data.data.followupEmail?.enabled ?? true,
+            delayMinutes: data.data.followupEmail?.delayMinutes ?? 15,
+            subject: data.data.followupEmail?.subject || '資料のご確認ありがとうございました - さらに詳しくご説明いたします',
           };
         }
         
@@ -302,6 +320,14 @@ export default function SettingsPage() {
     setSettings(prev => ({
       ...prev,
       scoring: { ...prev.scoring, ...updates }
+    }));
+    setHasUnsavedChanges(true);
+  };
+
+  const updateFollowupEmailSettings = (updates: Partial<FollowupEmailSettings>) => {
+    setSettings(prev => ({
+      ...prev,
+      followupEmail: { ...prev.followupEmail, ...updates }
     }));
     setHasUnsavedChanges(true);
   };
@@ -661,6 +687,12 @@ export default function SettingsPage() {
                 <TabsTrigger value="scoring">
                   スコアリング
                   {hasUnsavedChanges && activeTab === 'scoring' && (
+                    <span className="ml-1 h-2 w-2 rounded-full bg-amber-500" />
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="followupEmail">
+                  フォローアップメール
+                  {hasUnsavedChanges && activeTab === 'followupEmail' && (
                     <span className="ml-1 h-2 w-2 rounded-full bg-amber-500" />
                   )}
                 </TabsTrigger>
@@ -1103,6 +1135,85 @@ export default function SettingsPage() {
                     </div>
                     ))}
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          )}
+          
+          {/* Followup Email Settings */}
+          {isAdmin && settings.followupEmail && (
+          <TabsContent value="followupEmail" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>フォローアップメール設定</CardTitle>
+                <CardDescription>
+                  PDF閲覧後のフォローアップメール機能を設定
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="followupEnabled">フォローアップメール機能</Label>
+                    <p className="text-sm text-muted-foreground">
+                      PDF最終ページ閲覧後、TimeRex予約がない場合に自動メール送信
+                    </p>
+                  </div>
+                  <Switch 
+                    id="followupEnabled" 
+                    checked={settings.followupEmail.enabled}
+                    onCheckedChange={(checked) => updateFollowupEmailSettings({ enabled: checked })}
+                  />
+                </div>
+                
+                <Separator />
+                
+                <div className="space-y-2">
+                  <Label htmlFor="delayMinutes">送信遅延時間（分）</Label>
+                  <Input 
+                    id="delayMinutes" 
+                    type="number" 
+                    min="1"
+                    max="1440"
+                    value={settings.followupEmail.delayMinutes}
+                    onChange={(e) => updateFollowupEmailSettings({ delayMinutes: parseInt(e.target.value) || 15 })}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    PDF最終ページ閲覧後、何分後にメールを送信するか（1-1440分）
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="emailSubject">メール件名</Label>
+                  <Input 
+                    id="emailSubject" 
+                    value={settings.followupEmail.subject}
+                    onChange={(e) => updateFollowupEmailSettings({ subject: e.target.value })}
+                    placeholder="例: 資料のご確認ありがとうございました"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    フォローアップメールの件名
+                  </p>
+                </div>
+                
+                <Separator />
+                
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">動作条件</h3>
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <p>• PDF最終ページに到達した場合</p>
+                    <p>• 設定した遅延時間が経過した場合</p>
+                    <p>• TimeRex予約が完了していない場合</p>
+                    <p>• 会社のメールアドレスが設定されている場合</p>
+                  </div>
+                </div>
+                
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    フォローアップメールは1つのPDFにつき1回のみ送信されます。
+                    「後で検討する」を選択した場合、タイマーは停止されます。
+                  </AlertDescription>
+                </Alert>
               </CardContent>
             </Card>
           </TabsContent>

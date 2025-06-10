@@ -8,6 +8,16 @@ const nextConfig = {
   },
   images: { unoptimized: true },
   
+  // API Proxy設定を追加
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://backend/api/:path*',
+      },
+    ];
+  },
+  
   // Webpackの設定
   webpack: (config, { isServer }) => {
     // canvasモジュールを外部依存として設定

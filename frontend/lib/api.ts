@@ -113,6 +113,7 @@ export const pdfApi = {
   // PDF一覧を取得（公開用）
   getPublicAll: async (companyId: string) => {
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost/api'}/public/companies/${companyId}/pdfs`);
+    console.log(response);
     if (!response.ok) {
       throw new Error('PDF一覧の取得に失敗しました');
     }
@@ -190,6 +191,74 @@ export const pdfApi = {
   updateStatus: async (companyId: string, pdfId: string, status: 'active' | 'inactive') => {
     return api.put(`/admin/companies/${companyId}/pdfs/${pdfId}/status`, { status })
       .then((res) => res.data);
+  },
+
+  // フォローアップタイマー開始
+  startFollowupTimer: async (companyId: string, documentId: string, data: {
+    viewer_ip?: string;
+    triggered_at?: string;
+  }) => {
+    // viewer_ipが指定されていない場合は、簡易的にClientのIPを取得
+    const requestData = {
+      viewer_ip: data.viewer_ip || '127.0.0.1', // フォールバック値
+      triggered_at: data.triggered_at || new Date().toISOString(),
+    };
+    
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost/api'}/companies/${companyId}/pdfs/${documentId}/followup-timer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestData),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('フォローアップタイマー開始エラー:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorData,
+        requestData,
+        url: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost/api'}/companies/${companyId}/pdfs/${documentId}/followup-timer`
+      });
+      throw new Error(`フォローアップタイマー開始に失敗しました (${response.status}): ${errorData}`);
+    }
+    return response.json();
+  },
+
+  // フォローアップタイマー停止
+  stopFollowupTimer: async (companyId: string, documentId: string, data: {
+    viewer_ip?: string;
+    reason: 'user_dismissed' | 'timerex_booked';
+  }) => {
+    const requestData = {
+      viewer_ip: data.viewer_ip || '127.0.0.1', // フォールバック値
+      reason: data.reason,
+    };
+    
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost/api'}/companies/${companyId}/pdfs/${documentId}/followup-timer`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestData),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('フォローアップタイマー停止エラー:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorData,
+        requestData,
+        url: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost/api'}/companies/${companyId}/pdfs/${documentId}/followup-timer`
+      });
+      throw new Error(`フォローアップタイマー停止に失敗しました (${response.status}): ${errorData}`);
+    }
+    return response.json();
+  },
+
+  // TimeRex予約チェック
+  checkTimeRexBookings: async (companyId: string) => {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost/api'}/companies/${companyId}/timerex-bookings/recent`);
+    if (!response.ok) throw new Error('TimeRex予約チェックに失敗しました');
+    return response.json();
   },
 };
 
