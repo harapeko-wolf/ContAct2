@@ -26,7 +26,6 @@ class DocumentFactory extends Factory
     public function definition(): array
     {
         return [
-            'id' => $this->faker->uuid(),
             'company_id' => Company::factory(),
             'title' => $this->faker->sentence(3),
             'file_path' => 'test-documents/' . $this->faker->uuid() . '.pdf',
