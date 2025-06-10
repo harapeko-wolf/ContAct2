@@ -315,8 +315,19 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
   };
 
   // 最終ページ到達時の処理
-  const handleLastPageReached = (docId: string) => {
+  const handleLastPageReached = async (docId: string) => {
     console.log(`Document ${docId} last page reached, showing booking prompt`);
+    
+    // フォローアップタイマーを開始
+    try {
+      await pdfApi.startFollowupTimer(uuid, docId, {
+        triggered_at: new Date().toISOString(),
+      });
+      console.log('フォローアップタイマーを開始しました');
+    } catch (error) {
+      console.error('フォローアップタイマー開始に失敗:', error);
+    }
+    
     if (showBookingOption) {
       setShowBookingPrompt(true);
     }
@@ -429,7 +440,19 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
         {showBookingOption && (
           <div className="fixed bottom-4 right-4 z-50">
             <Button
-              onClick={() => {
+              onClick={async () => {
+                // 表示中のドキュメントがあれば、フォローアップタイマーを停止
+                if (selectedDocument) {
+                  try {
+                    await pdfApi.stopFollowupTimer(uuid, selectedDocument.id, {
+                      reason: 'timerex_booked',
+                    });
+                    console.log('フォローアップタイマーを停止しました（固定ボタンからTimeRex予約）');
+                  } catch (error) {
+                    console.error('フォローアップタイマー停止に失敗:', error);
+                  }
+                }
+                
                 if (companyData?.booking_link) {
                   try {
                     const bookingUrl = new URL(companyData.booking_link);
@@ -469,7 +492,19 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
               </DialogHeader>
               <div className="py-4">
                 <div className="flex gap-3">
-                  <Button onClick={() => {
+                  <Button onClick={async () => {
+                    // フォローアップタイマーを停止（TimeRex予約へ進む）
+                    if (selectedDocument) {
+                      try {
+                        await pdfApi.stopFollowupTimer(uuid, selectedDocument.id, {
+                          reason: 'timerex_booked',
+                        });
+                        console.log('フォローアップタイマーを停止しました（TimeRex予約）');
+                      } catch (error) {
+                        console.error('フォローアップタイマー停止に失敗:', error);
+                      }
+                    }
+                    
                     if (companyData?.booking_link) {
                       try {
                         const bookingUrl = new URL(companyData.booking_link);
@@ -491,7 +526,20 @@ export default function ViewPageContent({ uuid }: { uuid: string }) {
                     <Calendar className="h-4 w-4" />
                     候補の日時を見る
                   </Button>
-                  <Button variant="outline" onClick={() => setShowBookingPrompt(false)} className="flex-1">
+                  <Button variant="outline" onClick={async () => {
+                    // フォローアップタイマーをリセット（ユーザーが「後で検討」を選択）
+                    if (selectedDocument) {
+                      try {
+                        await pdfApi.startFollowupTimer(uuid, selectedDocument.id, {
+                          triggered_at: new Date().toISOString(),
+                        });
+                        console.log('フォローアップタイマーをリセットしました（後で検討）');
+                      } catch (error) {
+                        console.error('フォローアップタイマーリセットに失敗:', error);
+                      }
+                    }
+                    setShowBookingPrompt(false);
+                  }} className="flex-1">
                     後で検討する
                   </Button>
                 </div>
