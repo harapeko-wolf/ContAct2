@@ -17,7 +17,7 @@ class AppSettingsSeeder extends Seeder
         AppSetting::updateOrCreate(
             ['key' => 'general.default_expiration'],
             [
-                'value' => 30,
+                'value' => 0,
                 'description' => 'リンク有効期限（日数）',
                 'type' => 'number',
                 'is_public' => false
@@ -94,7 +94,7 @@ class AppSettingsSeeder extends Seeder
         AppSetting::updateOrCreate(
             ['key' => 'scoring.time_threshold'],
             [
-                'value' => 5,
+                'value' => 1,
                 'description' => '最小閲覧時間（秒）',
                 'type' => 'number',
                 'is_public' => false
@@ -121,6 +121,37 @@ class AppSettingsSeeder extends Seeder
                 ],
                 'description' => 'スコアリング層',
                 'type' => 'array',
+                'is_public' => false
+            ]
+        );
+
+        // フォローアップメール設定
+        AppSetting::updateOrCreate(
+            ['key' => 'email.followup_delay_minutes'],
+            [
+                'value' => 15,
+                'description' => 'フォローアップメール送信までの遅延時間（分）',
+                'type' => 'number',
+                'is_public' => false
+            ]
+        );
+
+        AppSetting::updateOrCreate(
+            ['key' => 'email.followup_enabled'],
+            [
+                'value' => true,
+                'description' => 'フォローアップメール機能の有効/無効',
+                'type' => 'boolean',
+                'is_public' => false
+            ]
+        );
+
+        AppSetting::updateOrCreate(
+            ['key' => 'email.followup_subject'],
+            [
+                'value' => '資料のご確認ありがとうございました - さらに詳しくご説明いたします',
+                'description' => 'フォローアップメールの件名',
+                'type' => 'string',
                 'is_public' => false
             ]
         );

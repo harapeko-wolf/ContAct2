@@ -54,7 +54,14 @@ Route::prefix('companies/{companyId}/pdfs/{documentId}')->group(function () {
     Route::get('view-logs', [App\Http\Controllers\Api\DocumentController::class, 'getViewLogs']);
     Route::post('feedback', [App\Http\Controllers\Api\DocumentController::class, 'submitFeedback']);
     Route::get('feedback', [App\Http\Controllers\Api\DocumentController::class, 'getFeedback']);
+
+    // フォローアップメールタイマー
+    Route::post('followup-timer', [App\Http\Controllers\Api\FollowupTimerController::class, 'start']);
+    Route::delete('followup-timer', [App\Http\Controllers\Api\FollowupTimerController::class, 'stop']);
 });
+
+// TimeRex予約チェック（認証不要）
+Route::get('companies/{companyId}/timerex-bookings/recent', [App\Http\Controllers\Api\FollowupTimerController::class, 'checkTimeRexBooking']);
 
 // 認証が必要なルート
 Route::middleware('auth:sanctum')->group(function () {
