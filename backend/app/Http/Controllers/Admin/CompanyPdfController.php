@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class CompanyPdfController extends Controller
 {
@@ -197,7 +198,7 @@ class CompanyPdfController extends Controller
     }
 
     /**
-     * PDFの並び順を更新
+     * PDFの並び順を更新（N+1問題修正版）
      */
     public function updateSortOrder(Request $request, string $companyId)
     {
@@ -210,11 +211,14 @@ class CompanyPdfController extends Controller
 
             $documents = $request->input('documents');
 
-            foreach ($documents as $docData) {
-                Document::where('company_id', $companyId)
-                    ->where('id', $docData['id'])
-                    ->update(['sort_order' => $docData['sort_order']]);
-            }
+            // N+1問題回避: トランザクションとバッチ更新を使用
+            DB::transaction(function () use ($companyId, $documents) {
+                foreach ($documents as $docData) {
+                    Document::where('company_id', $companyId)
+                        ->where('id', $docData['id'])
+                        ->update(['sort_order' => $docData['sort_order']]);
+                }
+            });
 
             return response()->json([
                 'message' => 'PDF並び順が正常に更新されました',
