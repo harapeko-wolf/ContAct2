@@ -38,10 +38,21 @@ class CompanyTest extends TestCase
                         'industry', 'employee_count', 'created_at', 'updated_at'
                     ]
                 ],
-                'current_page',
-                'last_page',
-                'per_page',
-                'total'
+                'meta' => [
+                    'current_page',
+                    'per_page',
+                    'total',
+                    'last_page',
+                    'from',
+                    'to',
+                    'timestamp'
+                ],
+                'links' => [
+                    'first',
+                    'last',
+                    'prev',
+                    'next'
+                ]
             ]);
     }
 

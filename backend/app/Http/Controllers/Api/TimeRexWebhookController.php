@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
 use App\Services\TimeRexService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
-class TimeRexWebhookController extends Controller
+class TimeRexWebhookController extends BaseApiController
 {
     protected TimeRexService $timeRexService;
 
@@ -19,7 +19,7 @@ class TimeRexWebhookController extends Controller
     /**
      * TimeRex Webhookを受信・処理する
      */
-    public function webhook(Request $request)
+    public function webhook(Request $request): JsonResponse
     {
         try {
             // リクエストボディを取得
@@ -35,22 +35,14 @@ class TimeRexWebhookController extends Controller
             $result = $this->timeRexService->processWebhook($payload);
 
             if ($result['success']) {
-                return response()->json([
+                return $this->successResponse([
                     'status' => 'success',
                     'message' => $result['message'],
                     'data' => $result['data']
-                ], 200);
+                ]);
             } else {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => $result['message'],
-                    'error' => [
-                        'code' => 'WEBHOOK_PROCESSING_ERROR',
-                        'message' => $result['message']
-                    ]
-                ], 400);
+                return $this->badRequestResponse($result['message']);
             }
-
         } catch (\Exception $e) {
             Log::error('TimeRex Webhook処理で予期しないエラー', [
                 'error' => $e->getMessage(),
@@ -58,26 +50,18 @@ class TimeRexWebhookController extends Controller
                 'payload' => $request->all()
             ]);
 
-            return response()->json([
-                'status' => 'error',
-                'message' => '内部サーバーエラー',
-                'error' => [
-                    'code' => 'INTERNAL_SERVER_ERROR',
-                    'message' => 'Webhook処理中に予期しないエラーが発生しました'
-                ]
-            ], 500);
+            return $this->serverErrorResponse($e, 'Webhook処理中に予期しないエラーが発生しました', 'TimeRex Webhookエラー');
         }
     }
 
     /**
      * TimeRex Webhookのヘルスチェック
      */
-    public function health(Request $request)
+    public function health(Request $request): JsonResponse
     {
-        return response()->json([
+        return $this->successResponse([
             'status' => 'ok',
-            'message' => 'TimeRex Webhook endpoint is healthy',
-            'timestamp' => now()->toISOString()
-        ], 200);
+            'message' => 'TimeRex Webhook endpoint is healthy'
+        ]);
     }
 }

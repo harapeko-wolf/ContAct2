@@ -1,5 +1,5 @@
 version: "2"
-authtoken_from_env: true
+# authtoken is set via environment variable or docker-compose
 tunnels:
   backend:
     addr: nginx:80

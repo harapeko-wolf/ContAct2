@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class Document extends Model
 {
@@ -14,7 +15,6 @@ class Document extends Model
     public $incrementing = false;
 
     protected $fillable = [
-        'id',
         'company_id',
         'title',
         'file_path',
@@ -25,6 +25,17 @@ class Document extends Model
         'sort_order',
         'metadata',
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if (!$model->getKey()) {
+                $model->setAttribute($model->getKeyName(), Str::uuid()->toString());
+            }
+        });
+    }
 
     protected $casts = [
         'file_size' => 'integer',
