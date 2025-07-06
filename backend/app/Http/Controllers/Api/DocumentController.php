@@ -2,16 +2,23 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\Traits\AuthorizationTrait;
+use App\Http\Requests\StoreDocumentRequest;
+use App\Http\Requests\UpdateDocumentRequest;
+use App\Http\Requests\LogDocumentViewRequest;
+use App\Http\Requests\SubmitDocumentFeedbackRequest;
 use App\Models\Document;
 use App\Services\DocumentServiceInterface;
 use App\Services\FileManagementServiceInterface;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
-class DocumentController extends Controller
+class DocumentController extends BaseApiController
 {
+    use AuthorizationTrait;
+
     private DocumentServiceInterface $documentService;
     private FileManagementServiceInterface $fileManagementService;
 
@@ -26,7 +33,7 @@ class DocumentController extends Controller
     /**
      * 資料一覧を取得
      */
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
         try {
             $filters = [
@@ -41,380 +48,185 @@ class DocumentController extends Controller
                 $request->get('page', 1)
             );
 
-            return response()->json($documents);
+            return $this->successResponse($documents);
         } catch (\Exception $e) {
-            Log::error('ドキュメント一覧取得エラー: ' . $e->getMessage());
-            return response()->json([
-                'error' => [
-                    'code' => 'DOCUMENT_LIST_ERROR',
-                    'message' => 'ドキュメント一覧の取得に失敗しました',
-                    'details' => $e->getMessage()
-                ]
-            ], 500);
+            return $this->serverErrorResponse($e, 'ドキュメント一覧の取得に失敗しました', 'ドキュメント一覧取得エラー');
         }
     }
 
     /**
      * 資料をアップロード
      */
-    public function store(Request $request)
+    public function store(StoreDocumentRequest $request): JsonResponse
     {
-        try {
-            $validated = $request->validate([
-                'title' => 'required|string|max:255',
-                'file' => 'required|file|mimes:pdf|max:51200', // 最大50MB
-            ]);
-        } catch (ValidationException $e) {
-            return response()->json([
-                'error' => [
-                    'code' => 'VALIDATION_ERROR',
-                    'message' => 'バリデーションエラーが発生しました',
-                    'details' => $e->errors()
-                ]
-            ], 422);
-        }
-
         try {
             $document = $this->documentService->uploadDocument(
                 $request->file('file'),
-                $validated['title'],
+                $request->validated()['title'],
                 $request->user()->company_id,
                 $request->user()->id
             );
 
-            return response()->json([
-                'data' => $document,
-                'meta' => [
-                    'timestamp' => now()
-                ]
-            ], 201);
+            return $this->createdResponse($document);
         } catch (\Exception $e) {
-            Log::error('ドキュメントアップロードエラー: ' . $e->getMessage());
-            return response()->json([
-                'error' => [
-                    'code' => 'DOCUMENT_UPLOAD_ERROR',
-                    'message' => 'ドキュメントのアップロードに失敗しました',
-                    'details' => $e->getMessage()
-                ]
-            ], 500);
+            return $this->serverErrorResponse($e, 'ドキュメントのアップロードに失敗しました', 'ドキュメントアップロードエラー');
         }
     }
 
     /**
      * 資料の詳細を取得
      */
-    public function show(Document $document)
+    public function show(Document $document): JsonResponse
     {
         try {
             // 権限チェック
             if (!$this->documentService->canUserAccessDocument($document->id, request()->user()->company_id)) {
-                return response()->json([
-                    'error' => [
-                        'code' => 'DOCUMENT_NOT_FOUND',
-                        'message' => 'ドキュメントが見つかりませんでした',
-                    ]
-                ], 404);
+                return $this->notFoundResponse('ドキュメントが見つかりませんでした');
             }
 
-            return response()->json([
-                'data' => $document,
-                'meta' => [
-                    'timestamp' => now()
-                ]
-            ]);
+            return $this->successResponse($document);
         } catch (\Exception $e) {
-            Log::error('ドキュメント詳細取得エラー: ' . $e->getMessage());
-            return response()->json([
-                'error' => [
-                    'code' => 'DOCUMENT_NOT_FOUND',
-                    'message' => 'ドキュメントが見つかりませんでした',
-                    'details' => $e->getMessage()
-                ]
-            ], 404);
+            return $this->serverErrorResponse($e, 'ドキュメントが見つかりませんでした', 'ドキュメント詳細取得エラー');
         }
     }
 
     /**
      * 資料を更新
      */
-    public function update(Request $request, Document $document)
+    public function update(UpdateDocumentRequest $request, Document $document): JsonResponse
     {
-        try {
-            $validated = $request->validate([
-                'title' => 'required|string|max:255',
-                'status' => 'sometimes|in:active,inactive',
-            ]);
-        } catch (ValidationException $e) {
-            return response()->json([
-                'error' => [
-                    'code' => 'VALIDATION_ERROR',
-                    'message' => 'バリデーションエラーが発生しました',
-                    'details' => $e->errors()
-                ]
-            ], 422);
-        }
-
         try {
             // 権限チェック
             if (!$this->documentService->canUserAccessDocument($document->id, $request->user()->company_id)) {
-                return response()->json([
-                    'error' => [
-                        'code' => 'DOCUMENT_NOT_FOUND',
-                        'message' => 'ドキュメントが見つかりませんでした',
-                    ]
-                ], 404);
+                return $this->notFoundResponse('ドキュメントが見つかりませんでした');
             }
 
-            $updatedDocument = $this->documentService->updateDocument($document->id, $validated);
+            $updatedDocument = $this->documentService->updateDocument($document->id, $request->validated());
 
-            return response()->json([
-                'data' => $updatedDocument,
-                'meta' => [
-                    'timestamp' => now()
-                ]
-            ]);
+            return $this->successResponse($updatedDocument);
         } catch (\Exception $e) {
-            Log::error('ドキュメント更新エラー: ' . $e->getMessage());
-            return response()->json([
-                'error' => [
-                    'code' => 'DOCUMENT_UPDATE_ERROR',
-                    'message' => 'ドキュメントの更新に失敗しました',
-                    'details' => $e->getMessage()
-                ]
-            ], 500);
+            return $this->serverErrorResponse($e, 'ドキュメントの更新に失敗しました', 'ドキュメント更新エラー');
         }
     }
 
     /**
      * 資料を削除
      */
-    public function destroy(Document $document)
+    public function destroy(Document $document): JsonResponse
     {
         try {
             // 権限チェック
             if (!$this->documentService->canUserAccessDocument($document->id, request()->user()->company_id)) {
-                return response()->json([
-                    'error' => [
-                        'code' => 'DOCUMENT_NOT_FOUND',
-                        'message' => 'ドキュメントが見つかりませんでした',
-                    ]
-                ], 404);
+                return $this->notFoundResponse('ドキュメントが見つかりませんでした');
             }
 
             $this->documentService->deleteDocument($document->id);
 
-            return response()->json(null, 204);
+            return $this->deletedResponse();
         } catch (\Exception $e) {
-            Log::error('ドキュメント削除エラー: ' . $e->getMessage());
-            return response()->json([
-                'error' => [
-                    'code' => 'DOCUMENT_DELETE_ERROR',
-                    'message' => 'ドキュメントの削除に失敗しました',
-                    'details' => $e->getMessage()
-                ]
-            ], 500);
+            return $this->serverErrorResponse($e, 'ドキュメントの削除に失敗しました', 'ドキュメント削除エラー');
         }
     }
 
     /**
      * 資料をダウンロード
      */
-    public function download(Document $document)
+    public function download(Document $document): JsonResponse
     {
         try {
             // 権限チェック
             if (!$this->documentService->canUserAccessDocument($document->id, request()->user()->company_id)) {
-                return response()->json([
-                    'error' => [
-                        'code' => 'DOCUMENT_NOT_FOUND',
-                        'message' => 'ドキュメントが見つかりませんでした',
-                    ]
-                ], 404);
+                return $this->notFoundResponse('ドキュメントが見つかりませんでした');
             }
 
             $url = $this->fileManagementService->getDownloadUrlWithFileName($document->file_path, $document->file_name);
 
-            return response()->json(['url' => $url]);
+            return $this->successResponse(['url' => $url]);
         } catch (\Exception $e) {
-            Log::error('ドキュメントダウンロードエラー: ' . $e->getMessage());
-            return response()->json([
-                'error' => [
-                    'code' => 'DOCUMENT_DOWNLOAD_ERROR',
-                    'message' => 'ドキュメントのダウンロードに失敗しました',
-                    'details' => $e->getMessage()
-                ]
-            ], 500);
+            return $this->serverErrorResponse($e, 'ドキュメントのダウンロードに失敗しました', 'ドキュメントダウンロードエラー');
         }
     }
 
     /**
      * 資料のプレビューURLを取得
      */
-    public function preview(Document $document)
+    public function preview(Document $document): JsonResponse
     {
         try {
             // 権限チェック
             if (!$this->documentService->canUserAccessDocument($document->id, request()->user()->company_id)) {
-                return response()->json([
-                    'error' => [
-                        'code' => 'DOCUMENT_NOT_FOUND',
-                        'message' => 'ドキュメントが見つかりませんでした',
-                    ]
-                ], 404);
+                return $this->notFoundResponse('ドキュメントが見つかりませんでした');
             }
 
             $url = $this->fileManagementService->getPreviewUrlWithFileName($document->file_path, $document->file_name);
 
-            return response()->json(['url' => $url]);
+            return $this->successResponse(['url' => $url]);
         } catch (\Exception $e) {
-            Log::error('ドキュメントプレビューエラー: ' . $e->getMessage());
-            return response()->json([
-                'error' => [
-                    'code' => 'DOCUMENT_PREVIEW_ERROR',
-                    'message' => 'ドキュメントのプレビューに失敗しました',
-                    'details' => $e->getMessage()
-                ]
-            ], 500);
+            return $this->serverErrorResponse($e, 'ドキュメントのプレビューに失敗しました', 'ドキュメントプレビューエラー');
         }
     }
 
     /**
      * PDF閲覧ログを記録
      */
-    public function logView(Request $request, $companyId, $documentId)
+    public function logView(LogDocumentViewRequest $request, $companyId, $documentId): JsonResponse
     {
-        try {
-            $validated = $request->validate([
-                'page_number' => 'required|integer|min:1',
-                'view_duration' => 'required|integer|min:0',
-            ]);
-        } catch (ValidationException $e) {
-            return response()->json([
-                'error' => [
-                    'code' => 'VALIDATION_ERROR',
-                    'message' => 'バリデーションエラーが発生しました',
-                    'details' => $e->errors()
-                ]
-            ], 422);
-        }
-
         try {
             $viewLog = $this->documentService->logDocumentView(
                 $documentId,
-                $validated['page_number'],
-                $validated['view_duration'],
+                $request->validated()['page_number'],
+                $request->validated()['view_duration'],
                 $request->ip(),
                 $request->userAgent()
             );
 
-            return response()->json([
-                'data' => $viewLog,
-                'meta' => [
-                    'timestamp' => now()
-                ]
-            ], 201);
+            return $this->createdResponse($viewLog);
         } catch (\Exception $e) {
-            Log::error('閲覧ログ記録エラー: ' . $e->getMessage());
-            return response()->json([
-                'error' => [
-                    'code' => 'VIEW_LOG_ERROR',
-                    'message' => '閲覧ログの記録に失敗しました',
-                    'details' => $e->getMessage()
-                ]
-            ], 500);
+            return $this->serverErrorResponse($e, '閲覧ログの記録に失敗しました', '閲覧ログ記録エラー');
         }
     }
 
     /**
      * PDF閲覧ログを取得
      */
-    public function getViewLogs(Request $request, Document $document)
+    public function getViewLogs(Request $request, Document $document): JsonResponse
     {
         try {
             $viewLogs = $this->documentService->getDocumentViewLogs($document->id);
 
-            return response()->json([
-                'data' => $viewLogs,
-                'meta' => [
-                    'timestamp' => now()
-                ]
-            ]);
+            return $this->successResponse($viewLogs);
         } catch (\Exception $e) {
-            Log::error('閲覧ログ取得エラー: ' . $e->getMessage());
-            return response()->json([
-                'error' => [
-                    'code' => 'VIEW_LOG_ERROR',
-                    'message' => '閲覧ログの取得に失敗しました',
-                    'details' => $e->getMessage()
-                ]
-            ], 500);
+            return $this->serverErrorResponse($e, '閲覧ログの取得に失敗しました', '閲覧ログ取得エラー');
         }
     }
 
     /**
      * 会社全体の閲覧ログを取得
      */
-    public function getCompanyViewLogs(Request $request, $companyId)
+    public function getCompanyViewLogs(Request $request, $companyId): JsonResponse
     {
         try {
             // 権限チェック：管理者は全ての会社のアクセスログを閲覧可能、一般ユーザーは自分の会社のみ
-            $user = $request->user();
-            if (!$user->isAdmin() && $companyId !== $user->company_id) {
-                return response()->json([
-                    'error' => [
-                        'code' => 'UNAUTHORIZED',
-                        'message' => 'アクセス権限がありません',
-                    ]
-                ], 403);
+            if ($authError = $this->ensureCompanyDocumentAccess($companyId)) {
+                return $authError;
             }
 
             $viewLogs = $this->documentService->getCompanyViewLogs($companyId);
 
-            return response()->json([
-                'data' => $viewLogs,
-                'meta' => [
-                    'timestamp' => now()
-                ]
-            ]);
+            return $this->successResponse($viewLogs);
         } catch (\Exception $e) {
-            Log::error('会社閲覧ログ取得エラー: ' . $e->getMessage());
-            return response()->json([
-                'error' => [
-                    'code' => 'VIEW_LOG_ERROR',
-                    'message' => '会社閲覧ログの取得に失敗しました',
-                    'details' => $e->getMessage()
-                ]
-            ], 500);
+            return $this->serverErrorResponse($e, '会社閲覧ログの取得に失敗しました', '会社閲覧ログ取得エラー');
         }
     }
 
     /**
      * フィードバックを送信
      */
-    public function submitFeedback(Request $request, $companyId, $documentId)
+    public function submitFeedback(SubmitDocumentFeedbackRequest $request, $companyId, $documentId): JsonResponse
     {
         try {
-            // 興味度アンケート用のバリデーションルールに変更（フロントエンドのデータ構造に合わせる）
-            $validated = $request->validate([
-                'selected_option' => 'required|array',
-                'selected_option.id' => 'required|integer',
-                'selected_option.label' => 'required|string',
-                'selected_option.score' => 'required|integer',
-                'feedback_type' => 'sometimes|in:survey,rating,comment,survey_response',
-                'content' => 'nullable|string|max:1000',
-                'interest_level' => 'sometimes|integer',
-            ]);
-        } catch (ValidationException $e) {
-            return response()->json([
-                'error' => [
-                    'code' => 'VALIDATION_ERROR',
-                    'message' => 'バリデーションエラーが発生しました',
-                    'details' => $e->errors()
-                ]
-            ], 422);
-        }
+            $validated = $request->validated();
 
-        try {
             // 興味度アンケートデータを適切なフォーマットに変換
             $feedbackType = $validated['feedback_type'] ?? 'survey';
             $feedbackMetadata = [
@@ -432,47 +244,23 @@ class DocumentController extends Controller
                 $feedbackMetadata
             );
 
-            return response()->json([
-                'data' => $feedback,
-                'meta' => [
-                    'timestamp' => now()
-                ]
-            ], 201);
+            return $this->createdResponse($feedback);
         } catch (\Exception $e) {
-            Log::error('フィードバック送信エラー: ' . $e->getMessage());
-            return response()->json([
-                'error' => [
-                    'code' => 'FEEDBACK_ERROR',
-                    'message' => 'フィードバックの送信に失敗しました',
-                    'details' => $e->getMessage()
-                ]
-            ], 500);
+            return $this->serverErrorResponse($e, 'フィードバックの送信に失敗しました', 'フィードバック送信エラー');
         }
     }
 
     /**
      * フィードバックを取得
      */
-    public function getFeedback(Request $request, $companyId, $documentId)
+    public function getFeedback(Request $request, $companyId, $documentId): JsonResponse
     {
         try {
             $feedback = $this->documentService->getDocumentFeedback($documentId);
 
-            return response()->json([
-                'data' => $feedback,
-                'meta' => [
-                    'timestamp' => now()
-                ]
-            ]);
+            return $this->successResponse($feedback);
         } catch (\Exception $e) {
-            Log::error('フィードバック取得エラー: ' . $e->getMessage());
-            return response()->json([
-                'error' => [
-                    'code' => 'FEEDBACK_ERROR',
-                    'message' => 'フィードバックの取得に失敗しました',
-                    'details' => $e->getMessage()
-                ]
-            ], 500);
+            return $this->serverErrorResponse($e, 'フィードバックの取得に失敗しました', 'フィードバック取得エラー');
         }
     }
 }

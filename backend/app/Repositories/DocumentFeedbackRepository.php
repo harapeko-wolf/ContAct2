@@ -75,7 +75,7 @@ class DocumentFeedbackRepository implements DocumentFeedbackRepositoryInterface
         $totalFeedback = $feedback->count();
         $ratings = $feedback->where('feedback_type', 'rating')
             ->map(function ($fb) {
-                $metadata = json_decode($fb->feedback_metadata, true);
+                $metadata = $fb->feedback_metadata;
                 return $metadata['rating'] ?? null;
             })
             ->filter()
@@ -138,7 +138,11 @@ class DocumentFeedbackRepository implements DocumentFeedbackRepositoryInterface
             ->whereNotNull('feedback_metadata')
             ->get()
             ->map(function ($feedback) {
-                $metadata = json_decode($feedback->feedback_metadata, true);
+                $metadata = $feedback->feedback_metadata;
+                // Handle both JSON string and array cases
+                if (is_string($metadata)) {
+                    $metadata = json_decode($metadata, true);
+                }
                 return $metadata['rating'] ?? null;
             })
             ->filter()
@@ -172,7 +176,11 @@ class DocumentFeedbackRepository implements DocumentFeedbackRepositoryInterface
             $totalFeedback = $feedback->count();
             $ratings = $feedback->where('feedback_type', 'rating')
                 ->map(function ($fb) {
-                    $metadata = json_decode($fb->feedback_metadata, true);
+                    $metadata = $fb->feedback_metadata;
+                    // Handle both JSON string and array cases
+                    if (is_string($metadata)) {
+                        $metadata = json_decode($metadata, true);
+                    }
                     return $metadata['rating'] ?? null;
                 })
                 ->filter()

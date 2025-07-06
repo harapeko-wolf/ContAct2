@@ -39,6 +39,18 @@ class TimeRexService
             // 予約データを保存
             DB::transaction(function () use ($company, $bookingData) {
                 $company->addTimeRexBooking($bookingData);
+
+                // 予約ステータスを自動更新（booking_statusのみ）
+                $company->refresh(); // データベースから最新の状態を取得
+                $company->updateBookingStatus();
+
+                Log::info('TimeRex予約データ処理完了', [
+                    'company_id' => $company->id,
+                    'event_id' => $bookingData['event_id'],
+                    'booking_status' => $bookingData['status'],
+                    'company_status' => $company->status, // 手動管理のためログのみ
+                    'note' => '会社ステータス（受注）は手動管理'
+                ]);
             });
 
             Log::info('TimeRex Webhook処理完了', [

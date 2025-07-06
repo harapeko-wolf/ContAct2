@@ -79,12 +79,12 @@ export interface PaginatedResponse<T> {
 
 export const companyApi = {
   getAll: (page: number = 1, perPage: number = 10, sortBy?: string, sortOrder?: string) => 
-    api.get<PaginatedResponse<Company>>(`/companies?page=${page}&per_page=${perPage}${sortBy ? `&sort_by=${sortBy}` : ''}${sortOrder ? `&sort_order=${sortOrder}` : ''}`).then((res) => res.data),
-  get: (id: string) => api.get<Company>(`/companies/${id}`).then((res) => res.data),
-  create: (data: Partial<Company>) => api.post<Company>('/companies', data).then((res) => res.data),
-  update: (id: string, data: Partial<Company>) => api.put<Company>(`/companies/${id}`, data).then((res) => res.data),
+    api.get(`/companies?page=${page}&per_page=${perPage}${sortBy ? `&sort_by=${sortBy}` : ''}${sortOrder ? `&sort_order=${sortOrder}` : ''}`).then((res) => res.data),
+  get: (id: string) => api.get(`/companies/${id}`).then((res) => res.data.data),
+  create: (data: Partial<Company>) => api.post('/companies', data).then((res) => res.data.data),
+  update: (id: string, data: Partial<Company>) => api.put(`/companies/${id}`, data).then((res) => res.data.data),
   delete: (id: string) => api.delete(`/companies/${id}`).then((res) => res.data),
-  getScoreDetails: (id: string) => api.get(`/companies/${id}/score-details`).then((res) => res.data),
+  getScoreDetails: (id: string) => api.get(`/companies/${id}/score-details`).then((res) => res.data.data),
 };
 
 export interface PDF {
