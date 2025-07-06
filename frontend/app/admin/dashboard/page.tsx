@@ -283,7 +283,7 @@ export default function DashboardPage() {
                     <div key={index}>
                       <div className="flex items-center gap-2">
                         <div className={`w-3 h-3 rounded-full ${getFeedbackColor(feedback)}`}></div>
-                        <p className="text-sm font-medium">{feedback.company_name}</p>
+                        <p className="text-sm font-medium">{feedback.document.company.name} - {feedback.document.title}</p>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1 pl-5">
                         {getFeedbackText(feedback)} - {getTimeAgo(feedback.created_at)}
@@ -310,11 +310,11 @@ export default function DashboardPage() {
                   dashboardData.recent_activity.map((activity, index) => (
                     <div key={index} className="flex justify-between items-start">
                       <div>
-                        <p className="text-sm font-medium">{activity.company_name} - {activity.document_title}</p>
+                        <p className="text-sm font-medium">{activity.document.company.name} - {activity.document.title}</p>
                         <p className="text-xs text-muted-foreground">{getTimeAgo(activity.viewed_at)}に閲覧</p>
                       </div>
-                      {activity.company_id && (
-                        <Link href={`/admin/companies/${activity.company_id}/access-log`}>
+                      {activity.document.company.id && (
+                        <Link href={`/admin/companies/${activity.document.company.id}/access-log`}>
                           <Button variant="ghost" size="icon" className="h-6 w-6">
                             <ArrowUpRight className="h-4 w-4" />
                           </Button>

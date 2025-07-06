@@ -298,19 +298,30 @@ export interface DashboardStats {
 }
 
 export interface DashboardFeedback {
-  company_name: string;
   feedback_type: string;
   content?: string;
   metadata?: any;
   created_at: string;
-  company_id?: string;
+  document: {
+    id: string;
+    title: string;
+    company: {
+      id: string;
+      name: string;
+    };
+  };
 }
 
 export interface DashboardActivity {
-  company_name: string;
-  document_title: string;
   viewed_at: string;
-  company_id?: string;
+  document: {
+    id: string;
+    title: string;
+    company: {
+      id: string;
+      name: string;
+    };
+  };
 }
 
 export interface SurveyOption {
