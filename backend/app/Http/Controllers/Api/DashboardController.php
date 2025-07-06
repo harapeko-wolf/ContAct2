@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
 use App\Services\DashboardServiceInterface;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class DashboardController extends Controller
+class DashboardController extends BaseApiController
 {
     private DashboardServiceInterface $dashboardService;
 
@@ -18,27 +18,15 @@ class DashboardController extends Controller
     /**
      * ダッシュボード統計データを取得
      */
-    public function getStats(Request $request)
+    public function getStats(Request $request): JsonResponse
     {
         try {
             $user = $request->user();
             $data = $this->dashboardService->getStats($user);
 
-            return response()->json([
-                'data' => $data,
-                'meta' => [
-                    'timestamp' => now(),
-                ]
-            ]);
-
-                } catch (\Exception $e) {
-            return response()->json([
-                'error' => [
-                    'code' => 'DASHBOARD_STATS_ERROR',
-                    'message' => 'ダッシュボード統計の取得に失敗しました',
-                    'details' => $e->getMessage()
-                ]
-            ], 500);
+            return $this->successResponse($data);
+        } catch (\Exception $e) {
+            return $this->serverErrorResponse($e, 'ダッシュボード統計の取得に失敗しました', 'ダッシュボード統計取得エラー');
         }
     }
 }

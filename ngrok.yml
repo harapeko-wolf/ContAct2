@@ -1,5 +1,5 @@
 version: "2"
-authtoken_from_env: true
+authtoken: 2y4s3m20y0ikgzYLD9lcSzTXZPU_7zegfhJR5aNWpSyjTF3uw
 tunnels:
   backend:
     addr: nginx:80

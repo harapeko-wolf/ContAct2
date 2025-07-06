@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Support\Facades\Log;
 
 class Company extends Model
 {
@@ -26,6 +27,7 @@ class Company extends Model
         'industry',
         'employee_count',
         'status',
+        'booking_status',
         'booking_link',
         'timerex_bookings',
     ];
@@ -147,5 +149,45 @@ class Company extends Model
         return collect($bookings)
             ->sortByDesc('created_at')
             ->first();
+    }
+
+    /**
+     * 予約ステータスを自動更新
+     */
+    public function updateBookingStatus()
+    {
+        $bookings = collect($this->timerex_bookings['bookings'] ?? []);
+
+        if ($bookings->isEmpty()) {
+            $newStatus = 'considering';
+        } else {
+            // 最新の予約を取得（updated_atで判定、なければcreated_at）
+            $latestBooking = $bookings->sortByDesc(function ($booking) {
+                return $booking['updated_at'] ?? $booking['created_at'];
+            })->first();
+
+            // 確定予約があるかチェック
+            $hasConfirmedBooking = $bookings->where('status', 'confirmed')->isNotEmpty();
+
+            if ($hasConfirmedBooking) {
+                $newStatus = 'confirmed';
+            } elseif ($latestBooking['status'] === 'cancelled') {
+                $newStatus = 'cancelled';
+            } else {
+                $newStatus = 'considering';
+            }
+        }
+
+        // 現在のステータスと異なる場合のみ更新
+        if ($this->booking_status !== $newStatus) {
+            $this->update(['booking_status' => $newStatus]);
+
+            Log::info('予約ステータス自動更新', [
+                'company_id' => $this->id,
+                'old_booking_status' => $this->booking_status,
+                'new_booking_status' => $newStatus,
+                'reason' => 'timerex_booking_status_changed'
+            ]);
+        }
     }
 }

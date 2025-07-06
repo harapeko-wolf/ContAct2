@@ -2,30 +2,24 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
+use App\Http\Requests\UpdateSettingsRequest;
 use App\Models\AppSetting;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 
-class SettingsController extends Controller
+class SettingsController extends BaseApiController
 {
     /**
      * すべての設定を取得
      */
-    public function index()
+    public function index(): JsonResponse
     {
         try {
             $user = Auth::user();
             if (!$user) {
-                return response()->json([
-                    'error' => [
-                        'code' => 'UNAUTHENTICATED',
-                        'message' => '認証が必要です',
-                    ]
-                ], 401);
+                return $this->unauthorizedResponse();
             }
 
             // カテゴリ別に設定を取得
@@ -41,104 +35,23 @@ class SettingsController extends Controller
                 $settings['followupEmail'] = $this->getFollowupEmailSettings();
             }
 
-            return response()->json([
-                'data' => $settings,
-                'meta' => [
-                    'timestamp' => now()->toISOString(),
-                    'is_admin' => $user->isAdmin(),
-                ]
+            return $this->successResponse($settings, [
+                'is_admin' => $user->isAdmin(),
             ]);
         } catch (\Exception $e) {
-            return response()->json([
-                'error' => [
-                    'code' => 'SETTINGS_FETCH_ERROR',
-                    'message' => '設定の取得に失敗しました',
-                    'details' => ['error' => $e->getMessage()]
-                ]
-            ], 500);
+            return $this->serverErrorResponse($e, '設定の取得に失敗しました', '設定取得エラー');
         }
     }
 
     /**
      * 設定を更新
      */
-    public function update(Request $request)
+    public function update(UpdateSettingsRequest $request): JsonResponse
     {
         try {
             $user = Auth::user();
             if (!$user) {
-                return response()->json([
-                    'error' => [
-                        'code' => 'UNAUTHENTICATED',
-                        'message' => '認証が必要です',
-                    ]
-                ], 401);
-            }
-
-            $validator = Validator::make($request->all(), [
-                'general' => 'sometimes|array',
-                'general.defaultExpiration' => 'sometimes|integer|min:0',
-                'general.trackPageViews' => 'sometimes|boolean',
-                'general.requireSurvey' => 'sometimes|boolean',
-                'general.showBookingOption' => 'sometimes|boolean',
-
-                'survey' => 'sometimes|array',
-                'survey.title' => 'sometimes|string|max:255',
-                'survey.description' => 'sometimes|string|max:500',
-                'survey.options' => 'sometimes|array|min:2',
-                'survey.options.*.id' => 'required_with:survey.options|integer',
-                'survey.options.*.label' => 'required_with:survey.options|string|max:255',
-
-                'scoring' => 'sometimes|array',
-                'scoring.timeThreshold' => 'sometimes|integer|min:0',
-                'scoring.completionBonus' => 'sometimes|integer|min:0',
-                'scoring.tiers' => 'sometimes|array|min:1',
-                'scoring.tiers.*.timeThreshold' => 'required_with:scoring.tiers|integer|min:0',
-                'scoring.tiers.*.points' => 'required_with:scoring.tiers|integer|min:0',
-
-                'followupEmail' => 'sometimes|array',
-                'followupEmail.enabled' => 'sometimes|boolean',
-                'followupEmail.delayMinutes' => 'sometimes|integer|min:1|max:1440',
-                'followupEmail.subject' => 'sometimes|string|max:255',
-
-                'account' => 'sometimes|array',
-                'account.fullName' => 'sometimes|string|max:255',
-                'account.email' => 'sometimes|email|max:255',
-                'account.companyName' => 'sometimes|string|max:255',
-                'account.currentPassword' => 'sometimes|nullable|string',
-                'account.newPassword' => 'sometimes|nullable|string|min:8',
-                'account.confirmPassword' => 'sometimes|nullable|string|same:account.newPassword',
-            ]);
-
-            // パスワード変更時の追加バリデーション
-            $accountData = $request->input('account', []);
-            if (!empty($accountData['newPassword'])) {
-                // 新しいパスワードが入力されている場合は、現在のパスワードも必須
-                $passwordValidator = Validator::make($request->all(), [
-                    'account.currentPassword' => 'required|string',
-                    'account.newPassword' => 'required|string|min:8',
-                    'account.confirmPassword' => 'required|string|same:account.newPassword',
-                ]);
-
-                if ($passwordValidator->fails()) {
-                    return response()->json([
-                        'error' => [
-                            'code' => 'PASSWORD_VALIDATION_ERROR',
-                            'message' => 'パスワード変更の入力内容に誤りがあります',
-                            'details' => $passwordValidator->errors()
-                        ]
-                    ], 422);
-                }
-            }
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'error' => [
-                        'code' => 'VALIDATION_ERROR',
-                        'message' => '入力内容に誤りがあります',
-                        'details' => $validator->errors()
-                    ]
-                ], 422);
+                return $this->unauthorizedResponse();
             }
 
             $updated = [];
@@ -171,12 +84,7 @@ class SettingsController extends Controller
             } else {
                 // 一般ユーザーがシステム設定を変更しようとした場合はエラー
                 if ($request->has('general') || $request->has('survey') || $request->has('scoring') || $request->has('followupEmail')) {
-                    return response()->json([
-                        'error' => [
-                            'code' => 'FORBIDDEN',
-                            'message' => 'システム設定の変更には管理者権限が必要です',
-                        ]
-                    ], 403);
+                    return $this->forbiddenResponse('システム設定の変更には管理者権限が必要です');
                 }
             }
 
@@ -188,69 +96,37 @@ class SettingsController extends Controller
                 } catch (\Exception $e) {
                     // パスワード関連のエラーは特別に処理
                     if (strpos($e->getMessage(), 'パスワード') !== false) {
-                        return response()->json([
-                            'error' => [
-                                'code' => 'PASSWORD_ERROR',
-                                'message' => $e->getMessage(),
-                                'details' => ['field' => 'account.currentPassword']
-                            ]
-                        ], 422);
+                        return $this->validationErrorResponse([
+                            'account.currentPassword' => [$e->getMessage()]
+                        ]);
                     }
 
                     // その他のアカウント設定エラー
-                    return response()->json([
-                        'error' => [
-                            'code' => 'ACCOUNT_UPDATE_ERROR',
-                            'message' => 'アカウント設定の更新に失敗しました: ' . $e->getMessage(),
-                            'details' => ['error' => $e->getMessage()]
-                        ]
-                    ], 422);
+                    return $this->badRequestResponse('アカウント設定の更新に失敗しました: ' . $e->getMessage());
                 }
             }
 
-            return response()->json([
-                'data' => [
-                    'message' => '設定が正常に更新されました',
-                    'updated_sections' => $updated
-                ],
-                'meta' => [
-                    'timestamp' => now()->toISOString()
-                ]
+            return $this->successResponse([
+                'message' => '設定が正常に更新されました',
+                'updated_sections' => $updated
             ]);
 
         } catch (\Exception $e) {
-            return response()->json([
-                'error' => [
-                    'code' => 'SETTINGS_UPDATE_ERROR',
-                    'message' => '設定の更新に失敗しました',
-                    'details' => ['error' => $e->getMessage()]
-                ]
-            ], 500);
+            return $this->serverErrorResponse($e, '設定の更新に失敗しました', '設定更新エラー');
         }
     }
 
     /**
      * 公開設定を取得（認証不要）
      */
-    public function publicSettings()
+    public function publicSettings(): JsonResponse
     {
         try {
             $settings = AppSetting::getPublicSettings();
 
-            return response()->json([
-                'data' => $settings,
-                'meta' => [
-                    'timestamp' => now()->toISOString()
-                ]
-            ]);
+            return $this->successResponse($settings);
         } catch (\Exception $e) {
-            return response()->json([
-                'error' => [
-                    'code' => 'PUBLIC_SETTINGS_ERROR',
-                    'message' => '公開設定の取得に失敗しました',
-                    'details' => ['error' => $e->getMessage()]
-                ]
-            ], 500);
+            return $this->serverErrorResponse($e, '公開設定の取得に失敗しました', '公開設定取得エラー');
         }
     }
 
