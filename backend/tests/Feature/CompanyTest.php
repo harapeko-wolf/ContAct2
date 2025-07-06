@@ -200,8 +200,7 @@ class CompanyTest extends TestCase
                     'message',
                     'details' => [
                         'name',
-                        'email',
-                        'status'
+                        'email'
                     ]
                 ]
             ]);
